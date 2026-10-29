@@ -1,0 +1,23 @@
+# Dépendances
+node_modules/
+
+# Variables d'environnement (secrets) — seul .env.example est versionné
+.env
+.env.*
+!.env.example
+
+# Builds
+dist/
+build/
+coverage/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS / éditeurs
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
