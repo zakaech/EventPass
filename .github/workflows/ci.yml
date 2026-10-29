@@ -1,0 +1,173 @@
+# Intégration continue : à chaque push et à chaque pull request, GitHub lance ces jobs sur
+# des machines virtuelles neuves. Si une étape échoue (lint, test, build), le job échoue et
+# le commit / la pull request est marqué en rouge.
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+# Un nouveau push sur la même branche annule l'exécution précédente devenue inutile
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    name: Backend — lint, tests et couverture
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    # Conteneur PostgreSQL démarré à côté du job, comme notre base de test locale
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: eventpass
+          POSTGRES_PASSWORD: eventpass
+          POSTGRES_DB: eventpass_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U eventpass -d eventpass_test"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgres://eventpass:eventpass@localhost:5432/eventpass_test
+      TEST_DATABASE_URL: postgres://eventpass:eventpass@localhost:5432/eventpass_test
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - run: npm ci
+
+      # Aucun secret dans le dépôt : des valeurs aléatoires sont tirées pour ce seul job
+      - name: Secrets de test aléatoires
+        run: |
+          echo "JWT_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "QR_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Tests unitaires et d'intégration, avec seuils de couverture
+        run: npm run test:coverage
+
+      - name: Résumé de la couverture
+        if: always()
+        run: |
+          node -e '
+            const t = require("./coverage/coverage-summary.json").total;
+            const ligne = (k) => `| ${k} | ${t[k].pct} % | ${t[k].covered}/${t[k].total} |`;
+            console.log(["### Couverture du backend", "| | % | couvert |", "|---|---|---|",
+              ...["lines", "statements", "functions", "branches"].map(ligne)].join("\n"));
+          ' >> "$GITHUB_STEP_SUMMARY" || true
+
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: couverture-backend
+          path: backend/coverage
+          retention-days: 14
+
+  frontend:
+    name: Frontend — lint et build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run build
+
+  docker:
+    name: Docker — build et démarrage de la pile
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: docker compose up (attend que tous les services soient « healthy »)
+        run: docker compose up -d --build --wait
+
+      - name: Vérifications de fumée
+        run: |
+          set -e
+          curl -fsS http://localhost:8080/api/v1/health
+          # Rafraîchissement sur une route React : Nginx doit renvoyer index.html (200)
+          curl -fsS http://localhost:8080/mes-billets | grep -q '<div id="root">'
+          curl -fsS http://localhost:8080/api/v1/events | grep -q '"pagination"'
+
+      - name: Journaux en cas d'échec
+        if: failure()
+        run: docker compose logs
+
+      - if: always()
+        run: docker compose down -v
+
+  e2e:
+    name: Scénario de bout en bout (Playwright)
+    runs-on: ubuntu-latest
+    # Plus long : lancé seulement si les tests et le build sont déjà verts
+    needs: [backend, frontend]
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Pile Docker (base vide + données de démo)
+        run: docker compose up -d --build --wait
+        env:
+          # Le scénario se connecte une vingtaine de fois depuis la même IP
+          LOGIN_RATE_LIMIT_MAX: 1000
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: e2e/package-lock.json
+
+      - name: Playwright + Chromium
+        working-directory: e2e
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+
+      - name: Scénario (31 étapes, dont le scan par caméra simulée)
+        working-directory: e2e
+        run: npm test
+        env:
+          E2E_BASE_URL: http://localhost:8080
+          E2E_CHANNEL: chromium
+
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: captures-e2e
+          path: e2e/screenshots/*.png
+          retention-days: 14
+
+      - name: Journaux en cas d'échec
+        if: failure()
+        run: docker compose logs
+
+      - if: always()
+        run: docker compose down -v
