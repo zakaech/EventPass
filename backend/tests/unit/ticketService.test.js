@@ -34,7 +34,8 @@ describe('reserve', () => {
 
     const result = await ticketService.reserve(3, 7, 2);
 
-    expect(result).toEqual({ tickets: [{ id: 1 }, { id: 2 }], places_restantes: 8 });
+    // ÉCHEC VOLONTAIRE (démo CI) : l'attente correcte est 8
+    expect(result).toEqual({ tickets: [{ id: 1 }, { id: 2 }], places_restantes: 9 });
     // Toutes les requêtes passent par le client de la transaction
     expect(eventRepository.decrementPlaces).toHaveBeenCalledWith(7, 2, CLIENT);
     expect(ticketRepository.countActiveByUserAndEvent).toHaveBeenCalledWith(3, 7, CLIENT);
