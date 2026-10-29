@@ -1,0 +1,346 @@
+/* ==========================================================================
+   EventPass — direction visuelle « billet imprimé »
+   Fond papier crème, encre bleu nuit, accent vermillon. Les cartes reprennent
+   la forme d'un billet (encoches + perforation). Toutes les couleurs, tailles
+   et rayons passent par ces variables : changer le thème = changer ce bloc.
+   ========================================================================== */
+
+:root {
+  /* Couleurs */
+  --paper: #f7f3ea;
+  --paper-deep: #efe8da;
+  --surface: #ffffff;
+  --ink: #16182d;
+  --ink-soft: #3d415c;
+  --muted: #6b6f86;
+  --line: #e4dccb;
+  --line-strong: #cfc4ad;
+
+  --accent: #c93c1a; /* vermillon foncé : texte blanc lisible (contraste ≥ 4.5) */
+  --accent-hover: #a8300f;
+  --accent-bright: #f2542d; /* décoratif uniquement */
+  --accent-soft: #fde4da;
+
+  --success: #1d7a50;
+  --success-soft: #dcf1e5;
+  --warning: #8a5a00;
+  --warning-soft: #fbefd2;
+  --danger: #b42318;
+  --danger-soft: #fbe1de;
+  --info: #2a52be;
+  --info-soft: #e1e8fb;
+
+  /* Couleurs des catégories (vignettes des événements) */
+  --cat-concert: #e2482a;
+  --cat-theatre: #8e3b8f;
+  --cat-sport: #1d7a50;
+  --cat-conference: #2a52be;
+  --cat-festival: #d99a00;
+  --cat-exposition: #0e7f86;
+  --cat-autre: #3d415c;
+
+  /* Typographie */
+  --font-display: 'Bricolage Grotesque Variable', 'Segoe UI', system-ui, sans-serif;
+  --font-body: 'Inter Variable', 'Segoe UI', system-ui, sans-serif;
+  --font-mono: ui-monospace, 'Cascadia Code', 'SFMono-Regular', Consolas, monospace;
+
+  /* Formes et profondeur */
+  --radius-sm: 8px;
+  --radius: 14px;
+  --radius-lg: 22px;
+  --shadow-sm: 0 1px 2px rgb(22 24 45 / 0.06);
+  --shadow: 0 1px 2px rgb(22 24 45 / 0.05), 0 8px 24px -12px rgb(22 24 45 / 0.18);
+  --shadow-lg: 0 2px 4px rgb(22 24 45 / 0.05), 0 24px 48px -20px rgb(22 24 45 / 0.3);
+
+  --container: 1180px;
+  --header-height: 68px;
+
+  color-scheme: light;
+}
+
+/* --- Reset léger ---------------------------------------------------------- */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+p {
+  margin: 0;
+}
+
+a {
+  color: inherit;
+}
+
+img {
+  max-width: 100%;
+  display: block;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+:focus-visible {
+  outline: 3px solid var(--accent-bright);
+  outline-offset: 2px;
+}
+
+::selection {
+  background: var(--accent-soft);
+}
+
+/* --- Utilitaires de mise en page ------------------------------------------ */
+.container {
+  width: 100%;
+  max-width: var(--container);
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+/* Uniquement vertical : le padding horizontal vient de .container (souvent combinés) */
+.page {
+  padding-top: 40px;
+  padding-bottom: 72px;
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.eyebrow {
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.mono {
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* --- Boutons -------------------------------------------------------------- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 20px;
+  border: 1.5px solid transparent;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  text-decoration: none;
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    background-color 0.15s,
+    border-color 0.15s,
+    color 0.15s,
+    transform 0.15s;
+}
+
+.btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: #fff;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.btn-dark {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.btn-dark:hover:not(:disabled) {
+  background: #2a2d4a;
+}
+
+.btn-outline {
+  background: transparent;
+  border-color: var(--line-strong);
+  color: var(--ink);
+}
+
+.btn-outline:hover:not(:disabled) {
+  border-color: var(--ink);
+  background: var(--surface);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--ink-soft);
+}
+
+.btn-ghost:hover:not(:disabled) {
+  background: var(--paper-deep);
+  color: var(--ink);
+}
+
+.btn-danger {
+  background: transparent;
+  border-color: color-mix(in srgb, var(--danger) 40%, transparent);
+  color: var(--danger);
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: var(--danger-soft);
+  border-color: var(--danger);
+}
+
+.btn-success {
+  background: var(--success);
+  color: #fff;
+}
+
+.btn-success:hover:not(:disabled) {
+  background: #155e3d;
+}
+
+.btn-sm {
+  min-height: 36px;
+  padding: 0 14px;
+  font-size: 0.875rem;
+}
+
+.btn-block {
+  width: 100%;
+}
+
+/* --- Formulaires ---------------------------------------------------------- */
+.input,
+.select,
+.textarea {
+  width: 100%;
+  min-height: 46px;
+  padding: 10px 14px;
+  background: var(--surface);
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius-sm);
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+
+.textarea {
+  min-height: 120px;
+  resize: vertical;
+}
+
+.input:hover,
+.select:hover,
+.textarea:hover {
+  border-color: var(--line-strong);
+}
+
+.input:focus,
+.select:focus,
+.textarea:focus {
+  outline: none;
+  border-color: var(--ink);
+  box-shadow: 0 0 0 4px rgb(22 24 45 / 0.08);
+}
+
+.input[aria-invalid='true'],
+.select[aria-invalid='true'],
+.textarea[aria-invalid='true'] {
+  border-color: var(--danger);
+}
+
+.label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+
+/* --- Surfaces ------------------------------------------------------------- */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+}
+
+.card-pad {
+  padding: 24px;
+}
+
+@media (max-width: 640px) {
+  .container {
+    padding: 0 16px;
+  }
+
+  .page {
+    padding-top: 28px;
+    padding-bottom: 56px;
+  }
+
+  .card-pad {
+    padding: 18px;
+  }
+}

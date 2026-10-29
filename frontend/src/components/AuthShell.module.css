@@ -1,0 +1,73 @@
+.shell {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 0.85fr);
+  gap: 32px;
+  align-items: stretch;
+  padding-top: 48px;
+  padding-bottom: 72px;
+}
+
+.formCard {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 40px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+}
+
+.title {
+  font-size: clamp(1.8rem, 4vw, 2.4rem);
+}
+
+.subtitle {
+  color: var(--ink-soft);
+  margin-bottom: 16px;
+}
+
+.aside {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 16px;
+  padding: 40px;
+  border-radius: var(--radius-lg);
+  color: var(--paper);
+  background:
+    radial-gradient(circle at 110% -10%, var(--accent-bright) 0 28%, transparent 28.5%),
+    radial-gradient(
+      circle at 110% -10%,
+      transparent 0 36%,
+      rgb(255 255 255 / 0.08) 36% 37%,
+      transparent 37%
+    ),
+    repeating-linear-gradient(-45deg, rgb(255 255 255 / 0.03) 0 2px, transparent 2px 10px),
+    var(--ink);
+}
+
+.aside h2 {
+  font-size: 1.8rem;
+}
+
+.aside p {
+  color: color-mix(in srgb, var(--paper) 72%, transparent);
+}
+
+@media (max-width: 860px) {
+  .shell {
+    grid-template-columns: 1fr;
+    padding-top: 28px;
+  }
+
+  .formCard {
+    padding: 24px;
+  }
+
+  .aside {
+    padding: 28px 24px;
+  }
+}
