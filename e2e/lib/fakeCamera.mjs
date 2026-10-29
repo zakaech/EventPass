@@ -13,7 +13,10 @@ const FRAMES = 15; // Chromium lit le fichier en boucle
 
 export function writeQrVideo(text, path) {
   const { modules } = QRCode.create(text, { errorCorrectionLevel: 'M' });
-  const moduleSize = Math.floor((HEIGHT * 0.75) / modules.size);
+  // Le QR occupe ~45 % de la hauteur : il tient largement dans la zone analysée par le
+  // scanner (carré de 70 % du côté le plus petit). Plus grand, ses coins (motifs de
+  // repérage) pouvaient sortir de cette zone selon la taille d'affichage : décodage aléatoire.
+  const moduleSize = Math.floor((HEIGHT * 0.45) / modules.size);
   const qrPixels = modules.size * moduleSize;
   const offsetX = Math.floor((WIDTH - qrPixels) / 2);
   const offsetY = Math.floor((HEIGHT - qrPixels) / 2);
