@@ -25,7 +25,38 @@ Le cahier des charges complet est dans `EventPass_prompt_ClaudeCode.md`.
 - **Auth** : JWT (en-tête `Authorization: Bearer`, durée configurable `JWT_EXPIRES_IN`) + bcrypt.
 - **Validation** : zod. **Sécurité** : helmet, CORS, express-rate-limit sur le login.
 - **Tests** : Jest + Supertest sur la base `eventpass_test`.
-- **Frontend** (`frontend/`, phase 2) : React + Vite, React Router, Context API, axios.
+- **Frontend** (`frontend/`) : React 19 + Vite 8 (ES modules), React Router 8 (mode déclaratif
+  `BrowserRouter`/`Routes`), Context API, axios. CSS Modules + variables CSS globales.
+  Lint : oxlint (`npm run lint`). Polices auto-hébergées via `@fontsource-variable`.
+
+## Conventions frontend
+- `pages/` (une page par route, sous-dossiers `organisateur/` et `admin/`), `components/`
+  (réutilisables, styles des petits composants dans `ui.module.css`), `services/` (appels API,
+  un fichier par domaine, tous via l'instance `api` de `services/api.js`), `context/`, `hooks/`,
+  `utils/` (format Intl fr-FR, erreurs API, règles d'affichage).
+- Un fichier `.jsx` n'exporte que des composants (sinon le rechargement à chaud casse) :
+  constantes et fonctions dans `utils/`, contexte dans `context/authContext.js`.
+- Chargement de données : hook `useAsync(fn, deps)` → `{ data, loading, error, reload, setData }`.
+- Erreurs API affichées via `getErrorMessage(err)` ; erreurs par champ via `getFieldErrors(err)`
+  + `<FormField error>`.
+- JWT dans `localStorage` (`services/tokenStorage.js`), ajouté par l'intercepteur de requête.
+  Intercepteur de réponse : sur 401 (hors `/auth/login`), il appelle le handler enregistré par
+  `AuthProvider` → `endSession()` : vide le jeton, `setUser(null)` **et** `navigate()` dans un
+  même `startTransition` (sinon `<ProtectedRoute>` redirige avant et écrase la navigation).
+- Effets React : toujours un corps `{ }` (ne rien renvoyer d'autre qu'une fonction de nettoyage).
+- Filtres de la liste d'événements stockés dans l'URL (`useSearchParams`).
+
+## Direction visuelle — « billet imprimé »
+- Fond papier crème `--paper #f7f3ea`, encre bleu nuit `--ink #16182d`, accent vermillon
+  `--accent #c93c1a` (texte blanc lisible ; `--accent-bright #f2542d` décoratif uniquement).
+- Titres **Bricolage Grotesque** (700–800, interlettrage serré), texte **Inter**.
+- Signature : cartes en forme de billet (encoches latérales en `mask` radial + perforation en
+  pointillés, ombre `drop-shadow` qui suit la découpe) ; « tampon » de date incliné sur un aplat
+  de la couleur de la catégorie (`--cat-*`) quand il n'y a pas d'image.
+- Boutons en pilule, rayons 8/14/22 px, badges de statut uniques (`StatusBadge`).
+- Toutes les valeurs sont des variables dans `src/styles/global.css`. Thème clair uniquement
+  (pas de mode sombre prévu pour l'instant). Responsive : gouttière 16 px sous 640 px, menu
+  burger sous 860 px, aucune page ne doit défiler horizontalement à 390 px.
 
 ## Conventions backend
 - Couches : `routes` → `controllers` (HTTP) → `services` (métier, transactions) →
@@ -39,11 +70,14 @@ Le cahier des charges complet est dans `EventPass_prompt_ClaudeCode.md`.
   du quota utilisateur (max 4 billets valides par utilisateur et par événement) dans la même
   transaction.
 
-## Commandes (depuis `backend/`)
-- `docker compose up -d` (racine) — PostgreSQL ; `npm run db:migrate` ; `npm run db:seed`
-- `npm run dev` — API sur http://localhost:3000/api/v1
-- `npm test` — Jest (recrée le schéma de `eventpass_test` puis lance les tests en série)
-- `npm run lint`
+## Commandes
+- `docker compose up -d` (racine) — PostgreSQL
+- `backend/` : `npm run db:migrate` ; `npm run db:seed` ; `npm run dev` (API sur
+  http://localhost:3000/api/v1) ; `npm test` (Jest : recrée le schéma de `eventpass_test` puis
+  lance les tests en série) ; `npm run lint`
+- `frontend/` : `npm run dev` (http://localhost:5173) ; `npm run build` ; `npm run lint`
+- Tests de bout en bout manuels : lancer l'API avec `LOGIN_RATE_LIMIT_MAX=1000`, sinon la limite
+  de 10 connexions / 15 min par IP bloque les scénarios qui se reconnectent souvent.
 - Collection de requêtes : `backend/requests/eventpass.http` (extension REST Client)
 - Comptes de démo (mot de passe `Password123!`) : admin@, alice@, bob@, sonora@, atlas@,
   nouveau@ (organisateur en attente) — tous en `@eventpass.dev`
@@ -71,7 +105,9 @@ Le cahier des charges complet est dans `EventPass_prompt_ClaudeCode.md`.
 ## Avancement
 - [x] Phase 1 — MVP backend (45 tests verts, dont les tests de concurrence) — revérifiée
   depuis une base vide (down -v → migrate → seed → tests → lint → collection .http complète)
-- [ ] Phase 2 — Frontend React (en cours)
+- [x] Phase 2 — Frontend React — parcours des 3 rôles vérifiés dans un navigateur réel
+  (Playwright + Edge, 23 étapes, desktop et mobile 390 px, 0 erreur console). Script de
+  vérification non versionné (prévu : tests E2E en phase 4 si souhaité).
 - [ ] Phase 3 — QR code et check-in
 - [ ] Phase 4 — Tests, Docker, CI
 - [ ] Phase 5 — Déploiement
