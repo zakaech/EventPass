@@ -39,9 +39,10 @@ export function ScanPage() {
   const event = ouverts.find((e) => e.id === demande) ?? ouverts[0];
 
   if (!event) {
-    // Prochain contrôle à venir : le plus proche des événements non annulés pas encore ouverts
+    // Prochain contrôle : un événement encore « en vente » (pas commencé) dont le contrôle
+    // n'est pas ouvert est forcément avant son ouverture. On prend le plus proche.
     const prochain = data.data
-      .filter((e) => e.statut !== 'ANNULE' && new Date(e.checkin_ouverture) > new Date())
+      .filter((e) => e.statut === 'PUBLIE' && !e.checkin_ouvert)
       .sort((a, b) => new Date(a.checkin_ouverture) - new Date(b.checkin_ouverture))[0];
     return (
       <div className="container page">
