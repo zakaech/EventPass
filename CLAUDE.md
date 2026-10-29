@@ -49,7 +49,8 @@ Le cahier des charges complet est dans `EventPass_prompt_ClaudeCode.md`.
   nouveau@ (organisateur en attente) — tous en `@eventpass.dev`
 
 ## Décisions prises
-- Projet dans `C:\dev\EventPass` (hors OneDrive). Dépôt GitHub distant : pas encore configuré.
+- Projet dans `C:\dev\EventPass` (hors OneDrive). Dépôt GitHub distant : pas encore configuré
+  (CLI `gh` non installée). `EventPass_prompt_ClaudeCode.md` est ignoré par git.
 - Quota : 4 billets max **au total** par utilisateur et par événement (VALIDE + UTILISE).
 - Index composite `tickets (event_id, user_id)` (pas d'index `tickets (event_id)` seul).
 - Filtre ville insensible à la casse (`lower(ville)`, index sur l'expression) ; filtres
@@ -61,13 +62,16 @@ Le cahier des charges complet est dans `EventPass_prompt_ClaudeCode.md`.
 - Statut de validation de l'organisateur relu en base à chaque requête (pas dans le JWT).
 - `PUT /organisateur/events/:id` = remplacement complet ; recalcule `places_restantes`
   sous `SELECT ... FOR UPDATE` ; refuse une capacité < billets vendus.
-- Le statut `TERMINE` n'est pas encore attribué automatiquement ; les événements passés sont
-  exclus de la liste publique par la condition `date_debut > now()`.
+- Statut `TERMINE` **calculé à la lecture** (`CASE WHEN statut = 'PUBLIE' AND date_debut <= now()`),
+  centralisé dans `src/repositories/eventColumns.js` : toute requête qui renvoie un événement
+  doit utiliser `eventColumns()` / `statutSql()`, jamais `SELECT *`. En base, la colonne reste
+  `PUBLIE`. Un événement terminé ne peut être ni réservé (`EVENEMENT_PASSE`) ni modifié.
 - `pg` : parseurs de type pour renvoyer BIGINT et NUMERIC en `Number`.
 
 ## Avancement
-- [x] Phase 1 — MVP backend (42 tests verts, dont les tests de concurrence)
-- [ ] Phase 2 — Frontend React
+- [x] Phase 1 — MVP backend (45 tests verts, dont les tests de concurrence) — revérifiée
+  depuis une base vide (down -v → migrate → seed → tests → lint → collection .http complète)
+- [ ] Phase 2 — Frontend React (en cours)
 - [ ] Phase 3 — QR code et check-in
 - [ ] Phase 4 — Tests, Docker, CI
 - [ ] Phase 5 — Déploiement
