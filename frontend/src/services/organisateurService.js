@@ -36,3 +36,9 @@ export async function listReservations(id, { page = 1, limit = 20 } = {}) {
   });
   return data;
 }
+
+/** token : contenu du QR code ou code de secours saisi à la main */
+export async function checkIn(eventId, token) {
+  const { data } = await api.post('/organisateur/checkin', { event_id: eventId, token });
+  return data; // { resultat: 'VALIDE', billet }
+}

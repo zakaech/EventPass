@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import { Route, Routes, useLocation } from 'react-router';
 import { Layout } from './components/Layout';
 import { ProtectedRoute } from './components/ProtectedRoute';
@@ -14,6 +14,14 @@ import { EventFormPage } from './pages/organisateur/EventFormPage';
 import { EventManagePage } from './pages/organisateur/EventManagePage';
 import { AdminPage } from './pages/admin/AdminPage';
 import { NotFoundPage } from './pages/NotFoundPage';
+import { PageLoader } from './components/Loader';
+
+// Chargement à la demande : la page de scan embarque un décodeur de QR code volumineux
+// (html5-qrcode). Avec lazy(), Vite la place dans un fichier séparé, téléchargé seulement
+// quand un organisateur ouvre le scanner. <Suspense> affiche un chargement en attendant.
+const ScanPage = lazy(() =>
+  import('./pages/organisateur/ScanPage').then((module) => ({ default: module.ScanPage })),
+);
 
 /** Remonte en haut de page à chaque navigation (comme un site classique). */
 function ScrollToTop() {
@@ -49,6 +57,14 @@ export function App() {
             <Route path="evenements/nouveau" element={<EventFormPage />} />
             <Route path="evenements/:id" element={<EventManagePage />} />
             <Route path="evenements/:id/modifier" element={<EventFormPage />} />
+            <Route
+              path="scanner"
+              element={
+                <Suspense fallback={<PageLoader />}>
+                  <ScanPage />
+                </Suspense>
+              }
+            />
           </Route>
 
           <Route element={<ProtectedRoute roles={['ADMIN']} />}>

@@ -67,9 +67,14 @@ function ValidatedDashboard({ organisation }) {
         eyebrow={organisation}
         title="Mes événements"
         actions={
-          <Link to="/organisateur/evenements/nouveau" className="btn btn-primary">
-            + Créer un événement
-          </Link>
+          <>
+            <Link to="/organisateur/scanner" className="btn btn-outline">
+              Scanner les billets
+            </Link>
+            <Link to="/organisateur/evenements/nouveau" className="btn btn-primary">
+              + Créer un événement
+            </Link>
+          </>
         }
       />
 

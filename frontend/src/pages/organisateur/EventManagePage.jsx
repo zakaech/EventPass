@@ -16,7 +16,13 @@ import { Pagination } from '../../components/Pagination';
 import { PageLoader, Loader } from '../../components/Loader';
 import { Alert } from '../../components/Alert';
 import { EmptyState } from '../../components/EmptyState';
-import { formatDateTime, formatNumber, formatPrice, formatShortDate } from '../../utils/format';
+import {
+  formatDateTime,
+  formatNumber,
+  formatPrice,
+  formatShortDate,
+  formatTime,
+} from '../../utils/format';
 import { shortCode } from '../../utils/events';
 import { getErrorMessage } from '../../utils/errors';
 import styles from './organisateur.module.css';
@@ -79,6 +85,11 @@ export function EventManagePage() {
             <Link to={`/evenements/${event.id}`} className="btn btn-ghost">
               Page publique
             </Link>
+            {event.checkin_ouvert && (
+              <Link to={`/organisateur/scanner?event=${event.id}`} className="btn btn-dark">
+                Scanner les billets
+              </Link>
+            )}
             {event.statut === 'PUBLIE' && (
               <>
                 <Link
@@ -120,7 +131,11 @@ export function EventManagePage() {
           <StatCard
             label="Check-ins"
             value={formatNumber(stats.check_ins)}
-            hint="Billets scannés à l’entrée"
+            hint={
+              stats.dernier_check_in
+                ? `${formatNumber(stats.taux_presence)} % des billets · dernier à ${formatTime(stats.dernier_check_in)}`
+                : 'Aucun billet scanné'
+            }
           />
           <StatCard label="Chiffre d’affaires" value={formatPrice(stats.chiffre_affaires)} />
           <StatCard label="Annulations" value={formatNumber(stats.billets_annules)} />
@@ -173,6 +188,7 @@ export function EventManagePage() {
                     <th>Billet</th>
                     <th>Réservé le</th>
                     <th>Statut</th>
+                    <th>Entrée</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -187,6 +203,13 @@ export function EventManagePage() {
                       <td>{formatShortDate(ticket.reserved_at)}</td>
                       <td>
                         <StatusBadge statut={ticket.statut} />
+                      </td>
+                      <td>
+                        {ticket.checked_in_at ? (
+                          formatTime(ticket.checked_in_at)
+                        ) : (
+                          <span className="muted">—</span>
+                        )}
                       </td>
                     </tr>
                   ))}

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { NavLink } from 'react-router';
+import { NavLink, useLocation } from 'react-router';
 import { useAuth } from '../hooks/useAuth';
 import { Logo } from './Logo';
 import styles from './Header.module.css';
@@ -10,8 +10,15 @@ const ROLE_LABELS = { USER: 'Spectateur', ORGANISATEUR: 'Organisateur', ADMIN: '
 function navLinksFor(user) {
   const links = [{ to: '/evenements', label: 'Événements' }];
   if (user?.role === 'USER') links.push({ to: '/mes-billets', label: 'Mes billets' });
-  if (user?.role === 'ORGANISATEUR')
-    links.push({ to: '/organisateur', label: 'Espace organisateur' });
+  if (user?.role === 'ORGANISATEUR') {
+    // NavLink est actif sur toutes les sous-pages : on exclut le scanner, qui a son propre lien
+    links.push({
+      to: '/organisateur',
+      label: 'Espace organisateur',
+      exclude: '/organisateur/scanner',
+    });
+    links.push({ to: '/organisateur/scanner', label: 'Scanner' });
+  }
   if (user?.role === 'ADMIN') links.push({ to: '/admin', label: 'Administration' });
   return links;
 }
@@ -19,6 +26,7 @@ function navLinksFor(user) {
 export function Header() {
   const { user, logout } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
+  const { pathname } = useLocation();
 
   // Referme le menu mobile quand on clique sur un lien ou un bouton du menu.
   // (Gestionnaire d'événement plutôt qu'un useEffect sur l'URL : la fermeture est
@@ -54,7 +62,14 @@ export function Header() {
           <ul className={styles.links}>
             {navLinksFor(user).map((link) => (
               <li key={link.to}>
-                <NavLink to={link.to} className={linkClass}>
+                <NavLink
+                  to={link.to}
+                  className={({ isActive }) =>
+                    linkClass({
+                      isActive: isActive && !(link.exclude && pathname.startsWith(link.exclude)),
+                    })
+                  }
+                >
                   {link.label}
                 </NavLink>
               </li>
