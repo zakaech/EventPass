@@ -30,9 +30,11 @@ beforeEach(async () => {
   orgaA = await createOrganisateur();
   orgaB = await createOrganisateur();
   spectateur = await createUser();
-  eventA = await createEvent(orgaA.user.id, { titre: 'Concert A' });
-  eventA2 = await createEvent(orgaA.user.id, { titre: 'Autre date de A' });
-  eventB = await createEvent(orgaB.user.id, { titre: 'Concert B' });
+  // Événements qui commencent dans 1 h : le contrôle (ouvert 6 h avant par défaut) a lieu
+  const bientot = new Date(Date.now() + HOUR);
+  eventA = await createEvent(orgaA.user.id, { titre: 'Concert A', date_debut: bientot });
+  eventA2 = await createEvent(orgaA.user.id, { titre: 'Autre date de A', date_debut: bientot });
+  eventB = await createEvent(orgaB.user.id, { titre: 'Concert B', date_debut: bientot });
 });
 
 async function createTicket(eventId, statut = 'VALIDE') {
@@ -205,7 +207,29 @@ describe('événements et organisateurs', () => {
   });
 });
 
-describe('fenêtre de check-in (CHECKIN_WINDOW_HOURS = 12 par défaut)', () => {
+describe('fenêtre de check-in (ouverture 6 h avant, fermeture 12 h après le début)', () => {
+  test('événement dans 7 h → CHECKIN_PAS_ENCORE_OUVERT avec l’heure d’ouverture', async () => {
+    const debut = new Date(Date.now() + 7 * HOUR);
+    const plusTard = await createEvent(orgaA.user.id, { date_debut: debut });
+    const ticket = await createTicket(plusTard.id);
+
+    const res = await scan(orgaA, plusTard.id, signQrToken(ticket.code));
+    expect(res.status).toBe(409);
+    expect(res.body.error.code).toBe('CHECKIN_PAS_ENCORE_OUVERT');
+    expect(new Date(res.body.error.details.ouverture)).toEqual(
+      new Date(debut.getTime() - 6 * HOUR),
+    );
+    expect((await ticketStatut(ticket.id)).statut).toBe('VALIDE');
+  });
+
+  test('événement dans 5 h → portes ouvertes, check-in possible', async () => {
+    const proche = await createEvent(orgaA.user.id, {
+      date_debut: new Date(Date.now() + 5 * HOUR),
+    });
+    const ticket = await createTicket(proche.id);
+    expect((await scan(orgaA, proche.id, signQrToken(ticket.code))).status).toBe(200);
+  });
+
   test('événement commencé il y a 2 h (statut TERMINE) → check-in encore possible', async () => {
     const enCours = await createEvent(orgaA.user.id, {
       date_debut: new Date(Date.now() - 2 * HOUR),
@@ -236,9 +260,10 @@ describe('fenêtre de check-in (CHECKIN_WINDOW_HOURS = 12 par défaut)', () => {
       titre: 'Fini',
       date_debut: new Date(Date.now() - 13 * HOUR),
     });
+    await createEvent(orgaA.user.id, { titre: 'Dans 10 jours' }); // date par défaut : J+10
     const res = await request(server).get('/api/v1/organisateur/events').set(auth(orgaA.token));
     const parTitre = Object.fromEntries(res.body.data.map((e) => [e.titre, e.checkin_ouvert]));
-    expect(parTitre).toMatchObject({ 'Concert A': true, Fini: false });
+    expect(parTitre).toMatchObject({ 'Concert A': true, Fini: false, 'Dans 10 jours': false });
   });
 });
 

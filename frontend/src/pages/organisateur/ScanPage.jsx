@@ -39,6 +39,10 @@ export function ScanPage() {
   const event = ouverts.find((e) => e.id === demande) ?? ouverts[0];
 
   if (!event) {
+    // Prochain contrôle à venir : le plus proche des événements non annulés pas encore ouverts
+    const prochain = data.data
+      .filter((e) => e.statut !== 'ANNULE' && new Date(e.checkin_ouverture) > new Date())
+      .sort((a, b) => new Date(a.checkin_ouverture) - new Date(b.checkin_ouverture))[0];
     return (
       <div className="container page">
         <PageHeader eyebrow="Contrôle à l’entrée" title="Scanner les billets" />
@@ -50,8 +54,10 @@ export function ScanPage() {
             </Link>
           }
         >
-          Le contrôle des billets est ouvert pour vos événements non annulés, jusqu’à quelques
-          heures après leur début.
+          Le contrôle des billets ouvre quelques heures avant le début de chaque événement et reste
+          possible pendant celui-ci.
+          {prochain &&
+            ` Prochain : « ${prochain.titre} », à partir du ${formatDateTime(prochain.checkin_ouverture)}.`}
         </EmptyState>
       </div>
     );
@@ -99,6 +105,7 @@ const RESULTS = {
   QR_INVALIDE: { tone: 'bad', icon: 'cross', title: 'QR code invalide' },
   EVENEMENT_ANNULE: { tone: 'bad', icon: 'cross', title: 'Événement annulé' },
   CHECKIN_FERME: { tone: 'neutral', icon: 'cross', title: 'Contrôle fermé' },
+  CHECKIN_PAS_ENCORE_OUVERT: { tone: 'neutral', icon: 'alert', title: 'Pas encore ouvert' },
 };
 const presentation = (code) =>
   RESULTS[code] ?? { tone: 'neutral', icon: 'cross', title: 'Vérification impossible' };
@@ -123,6 +130,8 @@ function describe(result) {
       ];
     case 'QR_INVALIDE':
       return ['Billet falsifié, modifié ou illisible.', 'Refusez l’entrée.'];
+    case 'CHECKIN_PAS_ENCORE_OUVERT':
+      return [`Ouverture du contrôle : ${formatDateTime(details.ouverture)}`];
     default:
       return [message];
   }

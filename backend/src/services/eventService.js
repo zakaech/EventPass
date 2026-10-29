@@ -31,17 +31,35 @@ function assertOwner(event, organisateurId) {
   }
 }
 
+const HOUR = 3600 * 1000;
+
 /**
- * Le contrôle des billets est ouvert tant que l'événement n'est pas annulé et que
- * date_debut + CHECKIN_WINDOW_HOURS n'est pas dépassé (donc aussi pendant l'événement,
- * quand son statut calculé vaut déjà TERMINE). Même règle que l'UPDATE de check-in.
+ * Fenêtre de contrôle des billets : de CHECKIN_OPENS_HOURS_BEFORE heures avant le début
+ * (ouverture des portes) à CHECKIN_WINDOW_HOURS heures après (l'événement a lieu : son
+ * statut calculé vaut déjà TERMINE). Même règle que l'UPDATE de check-in.
  */
-function isCheckinOpen(event) {
-  const fin = new Date(event.date_debut).getTime() + env.CHECKIN_WINDOW_HOURS * 3600 * 1000;
-  return event.statut !== 'ANNULE' && Date.now() <= fin;
+function checkinWindow(event) {
+  const debut = new Date(event.date_debut).getTime();
+  return {
+    ouverture: new Date(debut - env.CHECKIN_OPENS_HOURS_BEFORE * HOUR),
+    fermeture: new Date(debut + env.CHECKIN_WINDOW_HOURS * HOUR),
+  };
 }
 
-const withCheckin = (event) => ({ ...event, checkin_ouvert: isCheckinOpen(event) });
+function isCheckinOpen(event, now = Date.now()) {
+  const { ouverture, fermeture } = checkinWindow(event);
+  return event.statut !== 'ANNULE' && now >= ouverture.getTime() && now <= fermeture.getTime();
+}
+
+const withCheckin = (event) => {
+  const { ouverture, fermeture } = checkinWindow(event);
+  return {
+    ...event,
+    checkin_ouvert: isCheckinOpen(event),
+    checkin_ouverture: ouverture,
+    checkin_fermeture: fermeture,
+  };
+};
 
 async function getOwned(organisateurId, eventId) {
   const event = await eventRepository.findById(eventId);
@@ -130,6 +148,7 @@ async function getStats(organisateurId, eventId) {
 }
 
 module.exports = {
+  checkinWindow,
   isCheckinOpen,
   listPublic,
   getById,

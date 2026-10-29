@@ -114,12 +114,15 @@ async function findCodesByPrefix(prefix, db = pool) {
  *  - il appartient à l'événement contrôlé, qui appartient à l'organisateur connecté ;
  *  - l'événement n'est pas annulé (statut stocké = 'PUBLIE', y compris pendant qu'il a lieu,
  *    alors que le statut calculé vaut déjà TERMINE) ;
- *  - on est avant date_debut + la fenêtre de check-in.
+ *  - on est dans la fenêtre de check-in : [date_debut − ouverture ; date_debut + fenêtre].
  * Deux scans simultanés : PostgreSQL verrouille la ligne du billet ; le second UPDATE attend,
  * réévalue "statut = 'VALIDE'" sur la valeur à jour (UTILISE) et ne modifie rien.
  * Renvoie la ligne mise à jour, ou null si une règle n'est pas respectée.
  */
-async function checkIn({ code, eventId, organisateurId, windowHours }, db = pool) {
+async function checkIn(
+  { code, eventId, organisateurId, opensHoursBefore, windowHours },
+  db = pool,
+) {
   const { rows } = await db.query(
     `UPDATE tickets t
      SET statut = 'UTILISE', checked_in_at = now()
@@ -130,10 +133,11 @@ async function checkIn({ code, eventId, organisateurId, windowHours }, db = pool
        AND e.id = t.event_id
        AND e.organisateur_id = $3
        AND e.statut = 'PUBLIE'
+       AND now() >= e.date_debut - make_interval(hours => $5::int)
        AND now() <= e.date_debut + make_interval(hours => $4::int)
        AND u.id = t.user_id
      RETURNING t.id, t.code, t.statut, t.checked_in_at, u.nom, e.titre`,
-    [code, eventId, organisateurId, windowHours],
+    [code, eventId, organisateurId, windowHours, opensHoursBefore],
   );
   return rows[0] ?? null;
 }

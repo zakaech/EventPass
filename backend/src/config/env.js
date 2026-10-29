@@ -18,7 +18,9 @@ const schema = z
       .default('2h'),
     // Secret dédié à la signature des QR codes des billets (distinct de JWT_SECRET)
     QR_SECRET: z.string().min(32, 'QR_SECRET doit contenir au moins 32 caractères'),
-    // Le check-in reste ouvert jusqu'à date_debut + N heures
+    // Le check-in ouvre N heures avant date_debut (ouverture des portes)…
+    CHECKIN_OPENS_HOURS_BEFORE: z.coerce.number().int().min(0).max(72).default(6),
+    // … et reste ouvert jusqu'à date_debut + N heures
     CHECKIN_WINDOW_HOURS: z.coerce.number().int().min(1).max(72).default(12),
     BCRYPT_ROUNDS: z.coerce.number().int().min(4).max(15).default(10),
     CORS_ORIGIN: z.string().default('http://localhost:5173'),

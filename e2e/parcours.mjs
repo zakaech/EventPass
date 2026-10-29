@@ -310,21 +310,15 @@ await check('USER : QR code et code de secours dans « Mes billets »', async ()
   await shot('15-billet-qr');
   await dialog.getByRole('button', { name: 'Fermer' }).click();
 
-  // Préparation : jetons des billets d'Alice (ceux que l'interface affiche) et un billet
-  // annulé, dont on garde le jeton obtenu quand il était encore valide.
-  await api('/events/1/tickets', { method: 'POST', body: JSON.stringify({ quantite: 1 }) });
+  // Préparation : jetons des billets d'Alice, tels que l'interface les affiche
   const { body } = await api('/me/tickets?limit=50');
   const valides = (titre) => body.data.filter((t) => t.titre === titre && t.statut === 'VALIDE');
   const [live1, live2] = valides('Live au Point Éphémère');
-  const nuit = valides('Nuit Électro');
-  const annule = nuit.at(-1);
-  await api(`/me/tickets/${annule.id}/annuler`, { method: 'PATCH' });
   billets = {
     camera: live1,
     manuel: live2,
-    autreEvenement: nuit[0],
+    autreEvenement: valides('Nuit Électro')[0],
     autreOrganisateur: valides('DevConf Lyon 2026')[0],
-    annule,
   };
   if (Object.values(billets).some((b) => !b?.qr_token)) {
     throw new Error('Données de démo inattendues : relancer npm run db:seed');
@@ -420,11 +414,14 @@ await check('ORGANISATEUR : billet d’un autre événement / d’un autre organ
   await next();
 });
 
-await check('ORGANISATEUR : billet annulé → « Billet annulé »', async () => {
-  await page.getByLabel('Événement contrôlé').selectOption('1'); // id de « Nuit Électro »
-  await expectVisible(page.getByRole('heading', { name: 'Nuit Électro' }));
-  await manualScan(billets.annule.qr_token, 'Billet annulé');
-  await next();
+// Le cas « billet annulé » est couvert par les tests Jest : depuis l'interface, un billet ne
+// peut plus être annulé à moins de 24 h, donc jamais pendant que son contrôle est ouvert.
+await check('ORGANISATEUR : seuls les événements dont le contrôle est ouvert sont proposés', async () => {
+  await page.reload();
+  await expectVisible(page.getByRole('heading', { name: 'Live au Point Éphémère' }));
+  // « Nuit Électro » commence dans 5 jours : son contrôle ouvrira 6 h avant le début
+  const proposes = await page.getByRole('option', { name: /Nuit Électro/ }).count();
+  if (proposes !== 0) throw new Error('« Nuit Électro » ne devrait pas être contrôlable');
 });
 
 await check('ORGANISATEUR : statistiques de check-in à jour', async () => {

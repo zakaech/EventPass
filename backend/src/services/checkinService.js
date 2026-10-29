@@ -40,7 +40,15 @@ async function explainRefusal(organisateurId, eventId, code) {
       'EVENEMENT_ANNULE',
     );
   }
-  if (!event.checkin_ouvert) {
+  const now = Date.now();
+  if (now < event.checkin_ouverture.getTime()) {
+    throw new ConflictError(
+      `Le contrôle des billets n'est pas encore ouvert (ouverture ${env.CHECKIN_OPENS_HOURS_BEFORE} h avant le début)`,
+      'CHECKIN_PAS_ENCORE_OUVERT',
+      { ouverture: event.checkin_ouverture },
+    );
+  }
+  if (now > event.checkin_fermeture.getTime()) {
     throw new ConflictError(
       `Le contrôle des billets est fermé (plus de ${env.CHECKIN_WINDOW_HOURS} h après le début)`,
       'CHECKIN_FERME',
@@ -82,6 +90,7 @@ async function checkIn(organisateurId, eventId, input) {
     code,
     eventId,
     organisateurId,
+    opensHoursBefore: env.CHECKIN_OPENS_HOURS_BEFORE,
     windowHours: env.CHECKIN_WINDOW_HOURS,
   });
   if (!billet) {
