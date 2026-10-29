@@ -1,0 +1,266 @@
+###############################################################################
+# Collection de requêtes EventPass — extension VS Code "REST Client" (humao.rest-client)
+#
+# Prérequis : docker compose up -d ; npm run db:migrate ; npm run db:seed ; npm run dev
+# Cliquer sur "Send Request" au-dessus de chaque requête, DANS L'ORDRE :
+# les requêtes nommées (# @name) sont réutilisées plus bas (jetons, ids).
+###############################################################################
+
+@baseUrl = http://localhost:3000/api/v1
+@password = Password123!
+
+### Santé de l'API
+GET {{baseUrl}}/health
+
+
+###############################################################################
+# 1. INSCRIPTIONS
+###############################################################################
+
+### 1.1 Inscription d'un utilisateur (email unique grâce au timestamp)
+# @name registerUser
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "email": "client-{{$timestamp}}@demo.dev",
+  "password": "{{password}}",
+  "nom": "Client Démo"
+}
+
+### 1.2 Inscription d'un organisateur (compte EN_ATTENTE)
+# @name registerOrga
+POST {{baseUrl}}/auth/register/organisateur
+Content-Type: application/json
+
+{
+  "email": "orga-{{$timestamp}}@demo.dev",
+  "password": "{{password}}",
+  "nom": "Organisateur Démo",
+  "nom_organisation": "Démo Productions",
+  "ville": "Nantes",
+  "description": "Organisation créée depuis la collection .http"
+}
+
+@userToken = {{registerUser.response.body.$.token}}
+@orgaToken = {{registerOrga.response.body.$.token}}
+@orgaId = {{registerOrga.response.body.$.user.id}}
+
+### 1.3 Profil de l'utilisateur connecté
+GET {{baseUrl}}/auth/me
+Authorization: Bearer {{userToken}}
+
+### 1.4 L'organisateur non validé ne peut pas créer d'événement → 403 ORGANISATEUR_NON_VALIDE
+POST {{baseUrl}}/organisateur/events
+Authorization: Bearer {{orgaToken}}
+Content-Type: application/json
+
+{
+  "titre": "Événement refusé",
+  "categorie": "CONCERT",
+  "ville": "Nantes",
+  "lieu": "Stereolux",
+  "date_debut": "2030-06-21T20:00:00+02:00",
+  "capacite": 3,
+  "prix": 12
+}
+
+
+###############################################################################
+# 2. ADMIN : validation de l'organisateur
+###############################################################################
+
+### 2.1 Connexion admin (compte de démo)
+# @name loginAdmin
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@eventpass.dev",
+  "password": "{{password}}"
+}
+
+@adminToken = {{loginAdmin.response.body.$.token}}
+
+### 2.2 Organisateurs en attente
+GET {{baseUrl}}/admin/organisateurs?statut=EN_ATTENTE
+Authorization: Bearer {{adminToken}}
+
+### 2.3 Valider l'organisateur inscrit en 1.2
+PATCH {{baseUrl}}/admin/organisateurs/{{orgaId}}/validation
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "statut": "VALIDE"
+}
+
+
+###############################################################################
+# 3. ORGANISATEUR : création et gestion d'un événement
+###############################################################################
+
+### 3.1 Création d'un événement (3 places pour tester facilement la survente)
+# @name createEvent
+POST {{baseUrl}}/organisateur/events
+Authorization: Bearer {{orgaToken}}
+Content-Type: application/json
+
+{
+  "titre": "Concert test .http",
+  "description": "Petit concert pour tester le parcours",
+  "categorie": "CONCERT",
+  "ville": "Nantes",
+  "lieu": "Stereolux",
+  "date_debut": "2030-06-21T20:00:00+02:00",
+  "capacite": 3,
+  "prix": 12.5
+}
+
+@eventId = {{createEvent.response.body.$.event.id}}
+
+### 3.2 Mes événements
+GET {{baseUrl}}/organisateur/events
+Authorization: Bearer {{orgaToken}}
+
+### 3.3 Modification complète (PUT) : capacité passée à 5
+PUT {{baseUrl}}/organisateur/events/{{eventId}}
+Authorization: Bearer {{orgaToken}}
+Content-Type: application/json
+
+{
+  "titre": "Concert test .http (5 places)",
+  "description": "Petit concert pour tester le parcours",
+  "categorie": "CONCERT",
+  "ville": "Nantes",
+  "lieu": "Stereolux",
+  "date_debut": "2030-06-21T20:00:00+02:00",
+  "capacite": 5,
+  "prix": 12.5
+}
+
+
+###############################################################################
+# 4. PUBLIC : recherche d'événements
+###############################################################################
+
+### 4.1 Liste paginée
+GET {{baseUrl}}/events?page=1&limit=5
+
+### 4.2 Filtres : ville (insensible à la casse), catégorie, fourchette de prix
+GET {{baseUrl}}/events?ville=NANTES&categorie=CONCERT&prix_min=10&prix_max=20
+
+### 4.3 Filtre par dates
+GET {{baseUrl}}/events?date_min=2026-01-01&date_max=2031-01-01
+
+### 4.4 Détail avec places restantes
+GET {{baseUrl}}/events/{{eventId}}
+
+### 4.5 Paramètres invalides → 400 VALIDATION
+GET {{baseUrl}}/events?prix_min=50&prix_max=10&categorie=CIRQUE
+
+
+###############################################################################
+# 5. UTILISATEUR : réservation et annulation
+###############################################################################
+
+### 5.1 Réserver 2 billets
+# @name reserve
+POST {{baseUrl}}/events/{{eventId}}/tickets
+Authorization: Bearer {{userToken}}
+Content-Type: application/json
+
+{
+  "quantite": 2
+}
+
+@ticketId = {{reserve.response.body.$.tickets[0].id}}
+
+### 5.2 Réserver 3 billets de plus → 409 QUOTA_DEPASSE (max 4 par événement)
+POST {{baseUrl}}/events/{{eventId}}/tickets
+Authorization: Bearer {{userToken}}
+Content-Type: application/json
+
+{
+  "quantite": 3
+}
+
+### 5.3 Mes billets
+GET {{baseUrl}}/me/tickets
+Authorization: Bearer {{userToken}}
+
+### 5.4 Annuler un billet → la place est rendue
+PATCH {{baseUrl}}/me/tickets/{{ticketId}}/annuler
+Authorization: Bearer {{userToken}}
+
+### 5.5 Annuler le même billet une deuxième fois → 409 BILLET_NON_ANNULABLE
+PATCH {{baseUrl}}/me/tickets/{{ticketId}}/annuler
+Authorization: Bearer {{userToken}}
+
+### 5.6 Vérifier les places restantes (5 - 2 + 1 = 4)
+GET {{baseUrl}}/events/{{eventId}}
+
+
+###############################################################################
+# 6. STATISTIQUES
+###############################################################################
+
+### 6.1 Réservations de l'événement (organisateur)
+GET {{baseUrl}}/organisateur/events/{{eventId}}/reservations
+Authorization: Bearer {{orgaToken}}
+
+### 6.2 Statistiques de l'événement (organisateur)
+GET {{baseUrl}}/organisateur/events/{{eventId}}/stats
+Authorization: Bearer {{orgaToken}}
+
+### 6.3 Statistiques globales (admin)
+GET {{baseUrl}}/admin/stats
+Authorization: Bearer {{adminToken}}
+
+
+###############################################################################
+# 7. CAS D'ERREUR ET DONNÉES DE DÉMO
+###############################################################################
+
+### 7.1 Connexion de démo : alice (USER)
+# @name loginAlice
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "alice@eventpass.dev",
+  "password": "{{password}}"
+}
+
+### 7.2 Mauvais mot de passe → 401 (même message qu'un email inconnu)
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "alice@eventpass.dev",
+  "password": "mauvais"
+}
+
+### 7.3 Billets d'Alice : l'un concerne un événement dans 12 h (annulation refusée)
+GET {{baseUrl}}/me/tickets
+Authorization: Bearer {{loginAlice.response.body.$.token}}
+
+### 7.4 Sans jeton → 401
+GET {{baseUrl}}/me/tickets
+
+### 7.5 Un USER sur une route admin → 403
+GET {{baseUrl}}/admin/stats
+Authorization: Bearer {{userToken}}
+
+### 7.6 Annuler l'événement (annule aussi tous ses billets valides)
+PATCH {{baseUrl}}/organisateur/events/{{eventId}}/annuler
+Authorization: Bearer {{orgaToken}}
+
+### 7.7 Réserver sur un événement annulé → 409 EVENEMENT_INDISPONIBLE
+POST {{baseUrl}}/events/{{eventId}}/tickets
+Authorization: Bearer {{userToken}}
+Content-Type: application/json
+
+{
+  "quantite": 1
+}
