@@ -1,0 +1,25 @@
+services:
+  db:
+    image: postgres:18-alpine
+    container_name: eventpass-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-eventpass}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-eventpass}
+      POSTGRES_DB: ${POSTGRES_DB:-eventpass}
+    ports:
+      # 5433 côté hôte pour ne pas entrer en conflit avec un PostgreSQL local
+      - "${POSTGRES_PORT:-5433}:5432"
+    volumes:
+      # Depuis PostgreSQL 18, l'image officielle attend le volume sur /var/lib/postgresql
+      - pgdata:/var/lib/postgresql
+      # Scripts exécutés une seule fois, à la création du volume
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  pgdata:
