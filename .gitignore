@@ -1,7 +1,7 @@
-# Dépendances
+# DÃ©pendances
 node_modules/
 
-# Variables d'environnement (secrets) — seul .env.example est versionné
+# Variables d'environnement (secrets) â€” seul .env.example est versionnÃ©
 .env
 .env.*
 !.env.example
@@ -15,9 +15,12 @@ coverage/
 *.log
 npm-debug.log*
 
-# OS / éditeurs
+# OS / Ã©diteurs
 .DS_Store
 Thumbs.db
 .idea/
 .vscode/*
 !.vscode/extensions.json
+
+# Prompt de travail personnel (non publié)
+EventPass_prompt_ClaudeCode.md
