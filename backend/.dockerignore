@@ -1,0 +1,12 @@
+# Fichiers exclus du « contexte de build » envoyé à Docker :
+# plus rapide, image plus petite, et aucun secret local copié par erreur dans l'image.
+node_modules
+.env
+.env.*
+!.env.example
+coverage
+tests
+requests
+*.log
+Dockerfile
+.dockerignore

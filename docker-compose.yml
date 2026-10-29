@@ -1,3 +1,14 @@
+# Toute l'application en une commande :   docker compose up --build
+#   → http://localhost:8080   (Nginx : interface React + API relayée sur /api)
+#
+# Développement « à la main » (npm run dev) : seule la base est utile
+#   → docker compose up -d db
+#
+# Variables facultatives (fichier .env à la racine ou variables du terminal) :
+#   JWT_SECRET, QR_SECRET   secrets fixes (sinon générés au hasard à chaque démarrage)
+#   SEED_DEMO=false         ne pas insérer les données de démo
+#   FRONTEND_PORT=8081      autre port pour l'interface
+
 services:
   db:
     image: postgres:18-alpine
@@ -20,6 +31,40 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
+
+  backend:
+    build: ./backend
+    container_name: eventpass-backend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      # « db » = nom du service : Docker Compose fournit un DNS interne entre conteneurs
+      DATABASE_URL: postgres://${POSTGRES_USER:-eventpass}:${POSTGRES_PASSWORD:-eventpass}@db:5432/${POSTGRES_DB:-eventpass}
+      JWT_SECRET: ${JWT_SECRET:-}
+      QR_SECRET: ${QR_SECRET:-}
+      GENERATE_DEV_SECRETS: "true"
+      SEED_DEMO: ${SEED_DEMO:-true}
+      CORS_ORIGIN: http://localhost:${FRONTEND_PORT:-8080}
+      TRUST_PROXY: 1 # Nginx est devant l'API
+      LOGIN_RATE_LIMIT_MAX: ${LOGIN_RATE_LIMIT_MAX:-10}
+    depends_on:
+      db:
+        condition: service_healthy # attend que PostgreSQL accepte les connexions
+    # Pas de port publié : l'API n'est joignable qu'à travers Nginx
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_URL: /api/v1
+    container_name: eventpass-frontend
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_PORT:-8080}:8080"
+    depends_on:
+      backend:
+        condition: service_healthy # attend que l'API réponde sur /health
 
 volumes:
   pgdata:

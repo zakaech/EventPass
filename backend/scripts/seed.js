@@ -1,11 +1,17 @@
-// Données de démonstration : vide la base de développement puis la remplit.
-// Usage : npm run db:seed
+// Données de démonstration.
+// Usage :
+//   npm run db:seed                     → vide la base puis la remplit (développement)
+//   node scripts/seed.js --if-empty     → ne fait rien si la base contient déjà des comptes
+//                                         (utilisé au démarrage du conteneur Docker)
 const { pool, withTransaction } = require('../src/config/db');
 const env = require('../src/config/env');
 const { hashPassword } = require('../src/utils/password');
 
-if (env.NODE_ENV === 'production') {
-  console.error('Refus de lancer le seed en production : il efface toutes les données.');
+const IF_EMPTY = process.argv.includes('--if-empty');
+
+// En production, seul le mode --if-empty est autorisé : il ne peut jamais effacer de données.
+if (env.NODE_ENV === 'production' && !IF_EMPTY) {
+  console.error('Refus de vider la base en production : utiliser --if-empty.');
   process.exit(1);
 }
 
@@ -134,6 +140,14 @@ const reservations = [
 ];
 
 async function seed() {
+  if (IF_EMPTY) {
+    const { rows } = await pool.query('SELECT COUNT(*) AS total FROM users');
+    if (rows[0].total > 0) {
+      console.log('Base déjà remplie : données de démo non insérées.');
+      return;
+    }
+  }
+
   await withTransaction(async (client) => {
     // RESTART IDENTITY remet les compteurs d'id à 1 ; CASCADE vide aussi les tables liées
     await client.query('TRUNCATE tickets, events, organisateurs, users RESTART IDENTITY CASCADE');

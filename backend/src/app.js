@@ -27,7 +27,13 @@ app.use(cors({ origin: env.CORS_ORIGIN }));
 app.use(express.json({ limit: '100kb' }));
 
 if (env.NODE_ENV !== 'test') {
-  app.use(morgan('dev'));
+  // Journal des requêtes : coloré en développement, format standard (sans couleurs) en
+  // production. Les appels du healthcheck (toutes les 10 s) ne sont pas journalisés.
+  app.use(
+    morgan(env.NODE_ENV === 'production' ? 'combined' : 'dev', {
+      skip: (req) => req.originalUrl === '/api/v1/health',
+    }),
+  );
 }
 
 app.use('/api/v1', routes);
