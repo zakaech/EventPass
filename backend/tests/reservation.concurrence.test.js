@@ -88,7 +88,9 @@ test('même utilisateur, 4 réservations de 2 billets simultanées : le total re
   const event = await createEvent(organisateur.id, { capacite: 50 });
   const { user, token } = await createUser();
 
-  const responses = await Promise.all(Array.from({ length: 4 }, () => reserver(event.id, token, 2)));
+  const responses = await Promise.all(
+    Array.from({ length: 4 }, () => reserver(event.id, token, 2)),
+  );
 
   expect(responses.filter((r) => r.status === 201)).toHaveLength(2);
   expect(await countTickets(event.id, { userId: user.id })).toBe(4);

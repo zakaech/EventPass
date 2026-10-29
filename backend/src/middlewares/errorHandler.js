@@ -12,27 +12,38 @@ function errorHandler(err, req, res, _next) {
 
   // Corps JSON mal formé (erreur levée par express.json())
   if (err.type === 'entity.parse.failed') {
-    return res.status(400).json({ error: { code: 'JSON_INVALIDE', message: 'Corps JSON invalide' } });
+    return res
+      .status(400)
+      .json({ error: { code: 'JSON_INVALIDE', message: 'Corps JSON invalide' } });
   }
 
   // Filet de sécurité : violation d'une contrainte PostgreSQL non anticipée par un service
   if (err.code === '23505') {
-    return res.status(409).json({ error: { code: 'CONFLIT', message: 'Cette ressource existe déjà' } });
+    return res
+      .status(409)
+      .json({ error: { code: 'CONFLIT', message: 'Cette ressource existe déjà' } });
   }
   if (err.code === '23514') {
     return res
       .status(409)
-      .json({ error: { code: 'CONTRAINTE', message: 'Opération contraire aux règles de données' } });
+      .json({
+        error: { code: 'CONTRAINTE', message: 'Opération contraire aux règles de données' },
+      });
   }
 
   // Erreur inattendue : on la journalise mais on ne renvoie aucun détail interne au client
   console.error(err);
-  return res.status(500).json({ error: { code: 'ERREUR_INTERNE', message: 'Erreur interne du serveur' } });
+  return res
+    .status(500)
+    .json({ error: { code: 'ERREUR_INTERNE', message: 'Erreur interne du serveur' } });
 }
 
 function notFound(req, res) {
   res.status(404).json({
-    error: { code: 'ROUTE_INTROUVABLE', message: `Route ${req.method} ${req.originalUrl} introuvable` },
+    error: {
+      code: 'ROUTE_INTROUVABLE',
+      message: `Route ${req.method} ${req.originalUrl} introuvable`,
+    },
   });
 }
 

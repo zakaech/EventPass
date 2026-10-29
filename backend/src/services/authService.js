@@ -26,7 +26,14 @@ async function register({ email, password, nom }) {
 }
 
 /** Crée l'utilisateur et sa fiche organisateur ensemble : tout ou rien. */
-async function registerOrganisateur({ email, password, nom, nom_organisation, ville, description }) {
+async function registerOrganisateur({
+  email,
+  password,
+  nom,
+  nom_organisation,
+  ville,
+  description,
+}) {
   const passwordHash = await hashPassword(password);
   try {
     return await withTransaction(async (client) => {

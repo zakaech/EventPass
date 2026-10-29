@@ -12,7 +12,12 @@ async function createUser({ role = 'USER', email } = {}) {
     `INSERT INTO users (email, password_hash, nom, role)
      VALUES ($1, $2, $3, $4)
      RETURNING id, email, nom, role`,
-    [email ?? `user${counter}@test.dev`, await hashPassword(PASSWORD), `Utilisateur ${counter}`, role],
+    [
+      email ?? `user${counter}@test.dev`,
+      await hashPassword(PASSWORD),
+      `Utilisateur ${counter}`,
+      role,
+    ],
   );
   const user = rows[0];
   return { user, token: signToken(user) };

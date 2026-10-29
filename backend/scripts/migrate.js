@@ -6,7 +6,14 @@ const { spawnSync } = require('node:child_process');
 const env = require('../src/config/env');
 
 const direction = process.argv[2] === 'down' ? 'down' : 'up';
-const cli = path.join(__dirname, '..', 'node_modules', 'node-pg-migrate', 'bin', 'node-pg-migrate.js');
+const cli = path.join(
+  __dirname,
+  '..',
+  'node_modules',
+  'node-pg-migrate',
+  'bin',
+  'node-pg-migrate.js',
+);
 
 const result = spawnSync(
   process.execPath,

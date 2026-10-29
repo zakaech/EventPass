@@ -19,9 +19,10 @@ async function create({ email, passwordHash, nom, role = 'USER' }, db = pool) {
 
 /** Seule fonction qui renvoie password_hash : réservée à la connexion. */
 async function findByEmailWithPassword(email, db = pool) {
-  const { rows } = await db.query(`SELECT ${PUBLIC_COLUMNS}, password_hash FROM users WHERE email = $1`, [
-    email,
-  ]);
+  const { rows } = await db.query(
+    `SELECT ${PUBLIC_COLUMNS}, password_hash FROM users WHERE email = $1`,
+    [email],
+  );
   return rows[0] ?? null;
 }
 

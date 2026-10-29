@@ -60,14 +60,18 @@ describe('POST /events/:id/tickets', () => {
 
   test('événement annulé ou inexistant', async () => {
     const annule = await createEvent(organisateur.user.id, { statut: 'ANNULE' });
-    expect((await reserver(annule.id, user.token, 1)).body.error.code).toBe('EVENEMENT_INDISPONIBLE');
+    expect((await reserver(annule.id, user.token, 1)).body.error.code).toBe(
+      'EVENEMENT_INDISPONIBLE',
+    );
     expect((await reserver(99999, user.token, 1)).status).toBe(404);
   });
 
   test('seuls les comptes USER peuvent réserver', async () => {
     const event = await createEvent(organisateur.user.id);
     expect((await reserver(event.id, organisateur.token, 1)).status).toBe(403);
-    expect((await request(app).post(`/api/v1/events/${event.id}/tickets`).send({ quantite: 1 })).status).toBe(401);
+    expect(
+      (await request(app).post(`/api/v1/events/${event.id}/tickets`).send({ quantite: 1 })).status,
+    ).toBe(401);
   });
 });
 

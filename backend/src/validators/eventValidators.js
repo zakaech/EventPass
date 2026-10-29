@@ -20,10 +20,13 @@ const list = z.object({
       message: 'date_min doit être antérieure à date_max',
       path: ['date_min'],
     })
-    .refine((q) => q.prix_min === undefined || q.prix_max === undefined || q.prix_min <= q.prix_max, {
-      message: 'prix_min doit être inférieur ou égal à prix_max',
-      path: ['prix_min'],
-    }),
+    .refine(
+      (q) => q.prix_min === undefined || q.prix_max === undefined || q.prix_min <= q.prix_max,
+      {
+        message: 'prix_min doit être inférieur ou égal à prix_max',
+        path: ['prix_min'],
+      },
+    ),
 });
 
 // Corps complet d'un événement (création et remplacement par PUT)

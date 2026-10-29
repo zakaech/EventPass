@@ -5,7 +5,10 @@ const { toLimitOffset, paginated } = require('../utils/pagination');
 const { NotFoundError, ForbiddenError, ConflictError } = require('../utils/errors');
 
 async function listPublic({ page, limit, ...filters }) {
-  const { rows, total } = await eventRepository.searchPublic(filters, toLimitOffset({ page, limit }));
+  const { rows, total } = await eventRepository.searchPublic(
+    filters,
+    toLimitOffset({ page, limit }),
+  );
   return paginated(rows, total, { page, limit });
 }
 
@@ -23,7 +26,7 @@ function assertOwner(event, organisateurId) {
     throw new NotFoundError('Événement introuvable');
   }
   if (event.organisateur_id !== organisateurId) {
-    throw new ForbiddenError("Cet événement ne vous appartient pas");
+    throw new ForbiddenError('Cet événement ne vous appartient pas');
   }
 }
 
@@ -56,7 +59,10 @@ async function update(organisateurId, eventId, data) {
     const event = await eventRepository.findByIdForUpdate(eventId, client);
     assertOwner(event, organisateurId);
     if (event.statut !== 'PUBLIE') {
-      throw new ConflictError("Un événement annulé ou terminé ne peut plus être modifié", 'EVENEMENT_NON_MODIFIABLE');
+      throw new ConflictError(
+        'Un événement annulé ou terminé ne peut plus être modifié',
+        'EVENEMENT_NON_MODIFIABLE',
+      );
     }
 
     const billetsVendus = event.capacite - event.places_restantes;
@@ -89,7 +95,10 @@ async function cancel(organisateurId, eventId) {
 
 async function listReservations(organisateurId, eventId, { page, limit }) {
   await getOwned(organisateurId, eventId);
-  const { rows, total } = await ticketRepository.findByEvent(eventId, toLimitOffset({ page, limit }));
+  const { rows, total } = await ticketRepository.findByEvent(
+    eventId,
+    toLimitOffset({ page, limit }),
+  );
   return paginated(rows, total, { page, limit });
 }
 
