@@ -24,10 +24,36 @@ Le cahier des charges complet est dans `EventPass_prompt_ClaudeCode.md`.
   Une seule instance avec deux bases : `eventpass` (dev) et `eventpass_test` (tests).
 - **Auth** : JWT (en-tête `Authorization: Bearer`, durée configurable `JWT_EXPIRES_IN`) + bcrypt.
 - **Validation** : zod. **Sécurité** : helmet, CORS, express-rate-limit sur le login.
-- **Tests** : Jest + Supertest sur la base `eventpass_test`.
+- **Tests** : Jest + Supertest sur la base `eventpass_test` ; bout en bout : Playwright dans
+  `e2e/` (voir `e2e/README.md`).
 - **Frontend** (`frontend/`) : React 19 + Vite 8 (ES modules), React Router 8 (mode déclaratif
   `BrowserRouter`/`Routes`), Context API, axios. CSS Modules + variables CSS globales.
   Lint : oxlint (`npm run lint`). Polices auto-hébergées via `@fontsource-variable`.
+  QR : `qrcode` (génération), `html5-qrcode` (scan caméra, page chargée en `lazy()`).
+- **Dépôt** : https://github.com/zakaech/EventPass (branche `main`).
+
+## QR code et check-in (phase 3)
+- Jeton du QR : `EP1.<uuid du billet>.<HMAC-SHA256(QR_SECRET, "qr:"+uuid) en base64url>`,
+  calculé à la volée dans `GET /me/tickets` (champ `qr_token`, null si le billet n'est pas
+  VALIDE), jamais stocké. Code de secours : `XXXX-XXXX-XXXX-XXXX` = 8 premiers caractères de
+  l'uuid + 8 caractères hex de `HMAC("secours:"+uuid)` (champ `code_secours`).
+  Tout est dans `backend/src/utils/qrToken.js` (comparaisons en temps constant).
+- `QR_SECRET` obligatoire, ≥ 32 caractères, **différent** de `JWT_SECRET` (vérifié au démarrage).
+- `POST /organisateur/checkin { event_id, token }` (token = QR ou code de secours). Signature
+  vérifiée AVANT toute requête SQL, puis UN seul `UPDATE … WHERE statut = 'VALIDE' AND
+  event_id = $2 AND e.organisateur_id = $3 AND e.statut = 'PUBLIE' AND now() <= date_debut +
+  CHECKIN_WINDOW_HOURS`. Si 0 ligne : relecture pour le message. Codes d'erreur :
+  `QR_INVALIDE` (400), `DEJA_UTILISE` (409, `details.checked_in_at`), `BILLET_ANNULE`,
+  `AUTRE_EVENEMENT` (titre en `details` seulement si même organisateur), `EVENEMENT_ANNULE`,
+  `CHECKIN_FERME` (409), 403/404 si l'événement n'est pas à l'organisateur.
+- Le check-in utilise le statut **stocké** (`PUBLIE`), pas le statut calculé : un événement est
+  `TERMINE` dès `date_debut` mais reste contrôlable jusqu'à `date_debut + CHECKIN_WINDOW_HOURS`
+  (défaut 12). Pas de borne basse (on peut scanner avant l'ouverture des portes).
+  `checkin_ouvert` est calculé côté service (`eventService.isCheckinOpen`).
+- Tests de concurrence du check-in : passer par le **service** (Promise.allSettled), car via HTTP
+  les middlewares étalent les requêtes et un check-in non atomique passerait quand même.
+- Test caméra sur téléphone : `npm run dev:phone` (HTTPS auto-signé + `--host`), API relayée par
+  le proxy Vite (`/api` → `localhost:3000`) pour éviter le contenu mixte.
 
 ## Conventions frontend
 - `pages/` (une page par route, sous-dossiers `organisateur/` et `admin/`), `components/`
@@ -39,6 +65,8 @@ Le cahier des charges complet est dans `EventPass_prompt_ClaudeCode.md`.
 - Chargement de données : hook `useAsync(fn, deps)` → `{ data, loading, error, reload, setData }`.
 - Erreurs API affichées via `getErrorMessage(err)` ; erreurs par champ via `getFieldErrors(err)`
   + `<FormField error>`.
+- API appelée en relatif (`/api/v1`) : en dev, le proxy Vite relaie vers `localhost:3000` ;
+  en production, `VITE_API_URL` donne l'URL absolue.
 - JWT dans `localStorage` (`services/tokenStorage.js`), ajouté par l'intercepteur de requête.
   Intercepteur de réponse : sur 401 (hors `/auth/login`), il appelle le handler enregistré par
   `AuthProvider` → `endSession()` : vide le jeton, `setUser(null)` **et** `navigate()` dans un
@@ -75,16 +103,21 @@ Le cahier des charges complet est dans `EventPass_prompt_ClaudeCode.md`.
 - `backend/` : `npm run db:migrate` ; `npm run db:seed` ; `npm run dev` (API sur
   http://localhost:3000/api/v1) ; `npm test` (Jest : recrée le schéma de `eventpass_test` puis
   lance les tests en série) ; `npm run lint`
-- `frontend/` : `npm run dev` (http://localhost:5173) ; `npm run build` ; `npm run lint`
-- Tests de bout en bout manuels : lancer l'API avec `LOGIN_RATE_LIMIT_MAX=1000`, sinon la limite
-  de 10 connexions / 15 min par IP bloque les scénarios qui se reconnectent souvent.
+- `frontend/` : `npm run dev` (http://localhost:5173) ; `npm run dev:phone` (HTTPS, réseau
+  local, pour tester la caméra sur téléphone) ; `npm run build` ; `npm run lint`
+- `e2e/` : `npm test` — après `npm run db:seed`, API lancée avec `LOGIN_RATE_LIMIT_MAX=1000`
+  (sinon la limite de 10 connexions / 15 min par IP bloque le scénario) et frontend démarré.
+- Mutations temporaires du code pour éprouver un test : toujours sur une **copie de
+  sauvegarde** restaurée ensuite, jamais via `git checkout` (efface le travail non commité).
 - Collection de requêtes : `backend/requests/eventpass.http` (extension REST Client)
 - Comptes de démo (mot de passe `Password123!`) : admin@, alice@, bob@, sonora@, atlas@,
   nouveau@ (organisateur en attente) — tous en `@eventpass.dev`
 
 ## Décisions prises
-- Projet dans `C:\dev\EventPass` (hors OneDrive). Dépôt GitHub distant : pas encore configuré
-  (CLI `gh` non installée). `EventPass_prompt_ClaudeCode.md` est ignoré par git.
+- Projet dans `C:\dev\EventPass` (hors OneDrive). Remote `origin` = GitHub (push par HTTPS,
+  CLI `gh` non installée). `EventPass_prompt_ClaudeCode.md` est ignoré par git.
+- Captures d'écran pour le README : `docs/screenshots/` (desktop `NN-*.png`, mobile `m-NN-*.png`),
+  régénérées par le scénario e2e puis recopiées.
 - Quota : 4 billets max **au total** par utilisateur et par événement (VALIDE + UTILISE).
 - Index composite `tickets (event_id, user_id)` (pas d'index `tickets (event_id)` seul).
 - Filtre ville insensible à la casse (`lower(ville)`, index sur l'expression) ; filtres
@@ -106,8 +139,9 @@ Le cahier des charges complet est dans `EventPass_prompt_ClaudeCode.md`.
 - [x] Phase 1 — MVP backend (45 tests verts, dont les tests de concurrence) — revérifiée
   depuis une base vide (down -v → migrate → seed → tests → lint → collection .http complète)
 - [x] Phase 2 — Frontend React — parcours des 3 rôles vérifiés dans un navigateur réel
-  (Playwright + Edge, 23 étapes, desktop et mobile 390 px, 0 erreur console). Script de
-  vérification non versionné (prévu : tests E2E en phase 4 si souhaité).
-- [ ] Phase 3 — QR code et check-in
+  (Playwright + Edge, desktop et mobile 390 px, 0 erreur console). Script versionné dans `e2e/`.
+- [x] Phase 3 — QR code et check-in — 73 tests Jest (dont 18 check-in, 10 signature) ; scénario
+  e2e de 31 étapes, dont un scan réel par caméra simulée sur téléphone (valide puis déjà
+  utilisé) et saisie manuelle (secours, falsifié, autre événement/organisateur, annulé).
 - [ ] Phase 4 — Tests, Docker, CI
 - [ ] Phase 5 — Déploiement

@@ -31,6 +31,28 @@ Tests backend : `npm test` (dans `backend/`, avec PostgreSQL démarré).
 Requêtes d'exemple : [backend/requests/eventpass.http](backend/requests/eventpass.http)
 (extension VS Code « REST Client »).
 
+## Tester le scanner de billets sur un téléphone
+
+Les navigateurs n'autorisent la caméra que sur une page sécurisée : HTTPS, ou `localhost`.
+Depuis un téléphone, il faut donc servir le frontend en HTTPS :
+
+```bash
+cd frontend
+npm run dev:phone        # affiche une URL « Network: https://192.168.x.x:5173 »
+```
+
+1. Le téléphone doit être sur le **même réseau Wi-Fi** que l'ordinateur (autoriser Node.js dans
+   le pare-feu Windows si une fenêtre le demande).
+2. Ouvrir l'URL `https://192.168.x.x:5173` sur le téléphone. Le certificat est auto-signé :
+   accepter l'avertissement (« Paramètres avancés » → « Continuer »).
+3. Se connecter avec `sonora@eventpass.dev`, ouvrir **Scanner**, autoriser la caméra.
+4. Sur l'ordinateur, se connecter avec `alice@eventpass.dev` → Mes billets → « Afficher » sur un
+   billet de *Live au Point Éphémère*, et le présenter à la caméra du téléphone.
+
+L'API n'a pas besoin d'être exposée : le serveur de Vite relaie `/api` vers `localhost:3000`
+(une page HTTPS ne peut pas appeler une API en HTTP simple). Alternative sans certificat à
+accepter : un tunnel HTTPS (`cloudflared tunnel --url http://localhost:5173`, ngrok…).
+
 ## Comptes de démo
 
 Mot de passe commun : `Password123!` — la page de connexion propose aussi une connexion en un clic.
