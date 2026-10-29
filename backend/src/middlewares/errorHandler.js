@@ -24,11 +24,9 @@ function errorHandler(err, req, res, _next) {
       .json({ error: { code: 'CONFLIT', message: 'Cette ressource existe déjà' } });
   }
   if (err.code === '23514') {
-    return res
-      .status(409)
-      .json({
-        error: { code: 'CONTRAINTE', message: 'Opération contraire aux règles de données' },
-      });
+    return res.status(409).json({
+      error: { code: 'CONTRAINTE', message: 'Opération contraire aux règles de données' },
+    });
   }
 
   // Erreur inattendue : on la journalise mais on ne renvoie aucun détail interne au client
