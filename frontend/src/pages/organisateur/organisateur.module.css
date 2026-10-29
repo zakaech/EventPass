@@ -1,0 +1,252 @@
+.back {
+  display: inline-block;
+  margin-bottom: 20px;
+  color: var(--muted);
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.back:hover {
+  color: var(--ink);
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+}
+
+.statsSpaced {
+  margin-bottom: 28px;
+}
+
+/* --- Liste des événements -------------------------------------------------- */
+.eventList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.eventRow {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) 220px auto;
+  align-items: center;
+  gap: 20px;
+  padding: 14px 20px 14px 14px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.eventRowInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  font-size: 0.9rem;
+}
+
+.eventRowTitle {
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.eventRowTitle:hover {
+  color: var(--accent);
+}
+
+.eventRowProgress {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.eventRowSold {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+
+.eventRowActions {
+  display: flex;
+  gap: 8px;
+}
+
+@media (max-width: 960px) {
+  .eventRow {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .eventRowProgress,
+  .eventRowActions {
+    grid-column: 1 / -1;
+  }
+}
+
+/* --- Formulaire ------------------------------------------------------------ */
+.formLayout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 32px;
+  align-items: start;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.fieldset {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  min-width: 0;
+}
+
+.legend {
+  display: block;
+  padding: 0;
+  margin-bottom: 4px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.fieldset + .fieldset {
+  padding-top: 24px;
+  border-top: 1px dashed var(--line);
+}
+
+.grid2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+
+.formActions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.preview {
+  position: sticky;
+  top: calc(var(--header-height) + 20px);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.previewCard {
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.previewBody {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 16px 20px 18px;
+  border-top: 2px dashed var(--line);
+  font-size: 0.9rem;
+}
+
+.previewBody strong {
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+}
+
+.previewPrice {
+  margin-top: 8px;
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+
+@media (max-width: 960px) {
+  .formLayout {
+    grid-template-columns: 1fr;
+  }
+
+  .preview {
+    position: static;
+    order: -1;
+    max-width: 360px;
+  }
+}
+
+@media (max-width: 520px) {
+  .grid2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* --- Gestion d'un événement ---------------------------------------------- */
+.fillHead {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+
+.tableHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 20px 24px 12px;
+}
+
+.tableHead h2 {
+  font-size: 1.3rem;
+}
+
+.tableScroll {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.92rem;
+}
+
+.table th {
+  padding: 10px 24px;
+  text-align: left;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  background: var(--paper);
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.table td {
+  padding: 12px 24px;
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+}
+
+.table tbody tr:hover {
+  background: color-mix(in srgb, var(--paper) 50%, transparent);
+}
+
+.tableFoot {
+  padding: 0 24px 20px;
+}
