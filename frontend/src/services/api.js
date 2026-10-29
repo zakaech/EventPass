@@ -3,8 +3,9 @@ import { tokenStorage } from './tokenStorage';
 
 // Instance axios partagée par tous les services : URL de base commune + intercepteurs.
 // VITE_API_URL est lue au moment du build (variables préfixées VITE_ uniquement).
+// Par défaut, même origine que le frontend (/api/v1) : le proxy de Vite relaie vers l'API.
 export const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL ?? 'http://localhost:3000/api/v1',
+  baseURL: import.meta.env.VITE_API_URL || '/api/v1',
   timeout: 15000,
 });
 
