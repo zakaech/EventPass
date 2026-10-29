@@ -1,0 +1,297 @@
+.hero {
+  position: relative;
+  overflow: hidden;
+  border-bottom: 1px solid var(--line);
+  background:
+    radial-gradient(circle at 85% 20%, var(--accent-soft), transparent 45%),
+    linear-gradient(var(--paper), var(--paper-deep));
+}
+
+.heroInner {
+  display: grid;
+  grid-template-columns: 1.15fr 0.85fr;
+  align-items: center;
+  gap: 48px;
+  padding-top: 72px;
+  padding-bottom: 80px;
+}
+
+.heroText {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.heroTitle {
+  font-size: clamp(2.5rem, 6vw, 4.4rem);
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 1;
+}
+
+.heroTitle em {
+  font-style: normal;
+  color: var(--accent);
+  position: relative;
+  white-space: nowrap;
+}
+
+/* Soulignement « coup de feutre » */
+.heroTitle em::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0.02em;
+  height: 0.12em;
+  border-radius: 999px;
+  background: var(--accent-bright);
+  opacity: 0.35;
+  transform: rotate(-1.5deg);
+}
+
+.heroLead {
+  max-width: 52ch;
+  font-size: 1.15rem;
+  color: var(--ink-soft);
+}
+
+.search {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 8px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  box-shadow: var(--shadow);
+}
+
+.searchInput,
+.searchSelect {
+  min-width: 0;
+  min-height: 44px;
+  padding: 0 16px;
+  border: none;
+  background: transparent;
+}
+
+.searchInput {
+  flex: 1.3;
+}
+
+.searchSelect {
+  flex: 1;
+  border-left: 1px solid var(--line);
+}
+
+.searchInput:focus,
+.searchSelect:focus {
+  outline: none;
+}
+
+.search:focus-within {
+  border-color: var(--ink);
+}
+
+/* --- Pile de billets ------------------------------------------------------ */
+.stubs {
+  position: relative;
+  height: 320px;
+}
+
+.stub {
+  position: absolute;
+  left: calc(var(--i) * 24px);
+  top: calc(var(--i) * 92px);
+  width: min(100%, 380px);
+  display: flex;
+  align-items: stretch;
+  background: var(--surface);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+  transform: rotate(calc(-4deg + var(--i) * 3.5deg));
+  animation: deal 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+  animation-delay: calc(var(--i) * 0.12s);
+}
+
+@keyframes deal {
+  from {
+    opacity: 0;
+    transform: translateY(24px) rotate(0deg);
+  }
+}
+
+.stubDate {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 86px;
+  flex-shrink: 0;
+  background: var(--cat-color);
+  color: #fff;
+  border-right: 2px dashed rgb(255 255 255 / 0.6);
+  font-family: var(--font-display);
+  line-height: 1;
+}
+
+.stubDate span {
+  font-size: 2.1rem;
+  font-weight: 800;
+}
+
+.stubDate small {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+}
+
+.stubInfo {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  padding: 18px 20px;
+  min-width: 0;
+}
+
+.stubInfo strong {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.stubInfo span {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+/* --- Sections ------------------------------------------------------------- */
+.section {
+  padding-top: 40px;
+  padding-bottom: 64px;
+}
+
+.categories {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 48px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  font-weight: 600;
+  font-size: 0.9rem;
+  text-decoration: none;
+  transition:
+    border-color 0.15s,
+    transform 0.15s;
+}
+
+.chip:hover {
+  border-color: var(--cat-color);
+  transform: translateY(-1px);
+}
+
+.chipDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  background: var(--cat-color);
+  transform: rotate(45deg);
+}
+
+.sectionHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.sectionHead h2 {
+  font-size: 2rem;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 28px;
+}
+
+.band {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 32px;
+  margin-bottom: 72px;
+  padding: 40px 48px;
+  border-radius: var(--radius-lg);
+  background:
+    repeating-linear-gradient(-45deg, rgb(255 255 255 / 0.03) 0 2px, transparent 2px 10px),
+    var(--ink);
+  color: var(--paper);
+}
+
+.band h2 {
+  font-size: clamp(1.6rem, 3vw, 2.2rem);
+  margin: 6px 0 10px;
+}
+
+.band p {
+  color: color-mix(in srgb, var(--paper) 72%, transparent);
+  max-width: 50ch;
+}
+
+.bandEyebrow {
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent-bright);
+}
+
+@media (max-width: 900px) {
+  .heroInner {
+    grid-template-columns: 1fr;
+    padding-top: 48px;
+    padding-bottom: 56px;
+  }
+
+  .stubs {
+    display: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .search {
+    flex-direction: column;
+    border-radius: var(--radius);
+  }
+
+  .searchSelect {
+    border-left: none;
+    border-top: 1px solid var(--line);
+  }
+
+  .band {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 28px 24px;
+  }
+
+  .sectionHead h2 {
+    font-size: 1.6rem;
+  }
+}

@@ -1,0 +1,66 @@
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 18px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.count {
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+
+.filtersToggle {
+  display: none;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 32px;
+  align-items: start;
+}
+
+.sidebar {
+  position: sticky;
+  top: calc(var(--header-height) + 20px);
+}
+
+.results {
+  min-width: 0;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 24px;
+  transition: opacity 0.2s;
+}
+
+/* Pendant le chargement d'une nouvelle page, les anciens résultats restent visibles */
+.stale {
+  opacity: 0.5;
+}
+
+@media (max-width: 860px) {
+  .filtersToggle {
+    display: inline-flex;
+  }
+
+  .layout {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .sidebar {
+    position: static;
+    display: none;
+  }
+
+  .sidebarOpen {
+    display: block;
+  }
+}
