@@ -3,6 +3,7 @@ const eventRepository = require('../repositories/eventRepository');
 const ticketRepository = require('../repositories/ticketRepository');
 const { MAX_BILLETS_PAR_EVENEMENT } = require('../validators/ticketValidators');
 const { toLimitOffset, paginated } = require('../utils/pagination');
+const { signQrToken, backupCode } = require('../utils/qrToken');
 const { NotFoundError, ConflictError } = require('../utils/errors');
 
 /**
@@ -70,9 +71,22 @@ async function reserve(userId, eventId, quantite) {
   });
 }
 
+/**
+ * Billets de l'utilisateur. Chaque billet encore VALIDE reçoit son jeton signé (contenu du
+ * QR code) et son code de secours. Ils sont calculés à la volée et jamais stockés : seul
+ * le serveur, qui connaît QR_SECRET, peut les produire.
+ */
 async function listMine(userId, { page, limit }) {
   const { rows, total } = await ticketRepository.findByUser(userId, toLimitOffset({ page, limit }));
-  return paginated(rows, total, { page, limit });
+  const tickets = rows.map((ticket) => {
+    const valide = ticket.statut === 'VALIDE';
+    return {
+      ...ticket,
+      qr_token: valide ? signQrToken(ticket.code) : null,
+      code_secours: valide ? backupCode(ticket.code) : null,
+    };
+  });
+  return paginated(tickets, total, { page, limit });
 }
 
 /** Annule un billet et rend la place, dans la même transaction. */

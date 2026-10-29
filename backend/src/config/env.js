@@ -5,21 +5,30 @@ require('dotenv').config({ quiet: true });
 
 const { z } = require('zod');
 
-const schema = z.object({
-  NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
-  PORT: z.coerce.number().int().positive().default(3000),
-  DATABASE_URL: z.string().min(1),
-  TEST_DATABASE_URL: z.string().min(1).optional(),
-  JWT_SECRET: z.string().min(32, 'JWT_SECRET doit contenir au moins 32 caractères'),
-  JWT_EXPIRES_IN: z
-    .string()
-    .regex(/^\d+[smhd]?$/, 'JWT_EXPIRES_IN : nombre de secondes ou format 15m, 2h, 7d')
-    .default('2h'),
-  BCRYPT_ROUNDS: z.coerce.number().int().min(4).max(15).default(10),
-  CORS_ORIGIN: z.string().default('http://localhost:5173'),
-  LOGIN_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(10),
-  LOGIN_RATE_LIMIT_WINDOW_MINUTES: z.coerce.number().int().positive().default(15),
-});
+const schema = z
+  .object({
+    NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+    PORT: z.coerce.number().int().positive().default(3000),
+    DATABASE_URL: z.string().min(1),
+    TEST_DATABASE_URL: z.string().min(1).optional(),
+    JWT_SECRET: z.string().min(32, 'JWT_SECRET doit contenir au moins 32 caractères'),
+    JWT_EXPIRES_IN: z
+      .string()
+      .regex(/^\d+[smhd]?$/, 'JWT_EXPIRES_IN : nombre de secondes ou format 15m, 2h, 7d')
+      .default('2h'),
+    // Secret dédié à la signature des QR codes des billets (distinct de JWT_SECRET)
+    QR_SECRET: z.string().min(32, 'QR_SECRET doit contenir au moins 32 caractères'),
+    // Le check-in reste ouvert jusqu'à date_debut + N heures
+    CHECKIN_WINDOW_HOURS: z.coerce.number().int().min(1).max(72).default(12),
+    BCRYPT_ROUNDS: z.coerce.number().int().min(4).max(15).default(10),
+    CORS_ORIGIN: z.string().default('http://localhost:5173'),
+    LOGIN_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(10),
+    LOGIN_RATE_LIMIT_WINDOW_MINUTES: z.coerce.number().int().positive().default(15),
+  })
+  .refine((e) => e.QR_SECRET !== e.JWT_SECRET, {
+    message: 'QR_SECRET doit être différent de JWT_SECRET',
+    path: ['QR_SECRET'],
+  });
 
 const parsed = schema.safeParse(process.env);
 
