@@ -1,8 +1,8 @@
 const request = require('supertest');
 const jwt = require('jsonwebtoken');
-const app = require('../src/app');
-const { pool, resetDb } = require('./helpers/db');
-const { createUser, PASSWORD, auth } = require('./helpers/factories');
+const app = require('../../src/app');
+const { pool, resetDb } = require('../helpers/db');
+const { createUser, PASSWORD, auth } = require('../helpers/factories');
 
 beforeEach(resetDb);
 afterAll(() => pool.end());

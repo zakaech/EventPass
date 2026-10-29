@@ -1,13 +1,13 @@
 const request = require('supertest');
-const app = require('../src/app');
-const { pool, resetDb } = require('./helpers/db');
+const app = require('../../src/app');
+const { pool, resetDb } = require('../helpers/db');
 const {
   createUser,
   createOrganisateur,
   createEvent,
   daysFromNow,
   auth,
-} = require('./helpers/factories');
+} = require('../helpers/factories');
 
 afterAll(() => pool.end());
 

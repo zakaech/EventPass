@@ -6,7 +6,7 @@ const {
   backupCode,
   parseBackupCode,
   verifyBackupMac,
-} = require('../src/utils/qrToken');
+} = require('../../src/utils/qrToken');
 
 const CODE = '3f2b8c1e-9d4a-4b7e-8f21-6a5c0d9e7b13';
 const AUTRE_CODE = '9a1c2d3e-4f50-4617-8a9b-0c1d2e3f4a5b';

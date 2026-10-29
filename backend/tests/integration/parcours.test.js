@@ -1,9 +1,9 @@
 // Critère de la phase 1 : inscription → création d'événement → réservation → annulation,
 // entièrement à travers l'API HTTP.
 const request = require('supertest');
-const app = require('../src/app');
-const { pool, resetDb } = require('./helpers/db');
-const { createUser, auth, daysFromNow } = require('./helpers/factories');
+const app = require('../../src/app');
+const { pool, resetDb } = require('../helpers/db');
+const { createUser, auth, daysFromNow } = require('../helpers/factories');
 
 beforeAll(resetDb);
 afterAll(() => pool.end());

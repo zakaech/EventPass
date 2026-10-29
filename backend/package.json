@@ -17,7 +17,10 @@
     "db:seed": "node scripts/seed.js",
     "test": "jest --runInBand",
     "lint": "eslint .",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "test:unit": "jest --selectProjects unit",
+    "test:integration": "jest --runInBand --selectProjects integration",
+    "test:coverage": "jest --runInBand --coverage"
   },
   "dependencies": {
     "bcrypt": "^6.0.0",

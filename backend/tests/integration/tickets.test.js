@@ -1,7 +1,7 @@
 const request = require('supertest');
-const app = require('../src/app');
-const { pool, resetDb, getEvent } = require('./helpers/db');
-const { createUser, createOrganisateur, createEvent, auth } = require('./helpers/factories');
+const app = require('../../src/app');
+const { pool, resetDb, getEvent } = require('../helpers/db');
+const { createUser, createOrganisateur, createEvent, auth } = require('../helpers/factories');
 
 let organisateur;
 let user;

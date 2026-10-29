@@ -1,10 +1,10 @@
 // Check-in à l'entrée : POST /api/v1/organisateur/checkin { event_id, token }
 const request = require('supertest');
-const app = require('../src/app');
-const { pool, resetDb } = require('./helpers/db');
-const { createUser, createOrganisateur, createEvent, auth } = require('./helpers/factories');
-const { signQrToken, backupCode } = require('../src/utils/qrToken');
-const checkinService = require('../src/services/checkinService');
+const app = require('../../src/app');
+const { pool, resetDb } = require('../helpers/db');
+const { createUser, createOrganisateur, createEvent, auth } = require('../helpers/factories');
+const { signQrToken, backupCode } = require('../../src/utils/qrToken');
+const checkinService = require('../../src/services/checkinService');
 
 const HOUR = 60 * 60 * 1000;
 let server;

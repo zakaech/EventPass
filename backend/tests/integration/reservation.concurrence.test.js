@@ -2,9 +2,9 @@
 // Le serveur les traite en même temps et leurs transactions PostgreSQL se chevauchent,
 // exactement comme lors d'une ouverture de billetterie très demandée.
 const request = require('supertest');
-const app = require('../src/app');
-const { pool, resetDb, getEvent, countTickets } = require('./helpers/db');
-const { createUser, createOrganisateur, createEvent, auth } = require('./helpers/factories');
+const app = require('../../src/app');
+const { pool, resetDb, getEvent, countTickets } = require('../helpers/db');
+const { createUser, createOrganisateur, createEvent, auth } = require('../helpers/factories');
 
 let server;
 let organisateur;
