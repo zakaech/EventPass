@@ -1,0 +1,103 @@
+.dialog {
+  width: min(360px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  padding: 0;
+  border: none;
+  background: transparent;
+  overflow: visible;
+}
+
+.dialog::backdrop {
+  background: rgb(22 24 45 / 0.7);
+  backdrop-filter: blur(3px);
+}
+
+.pass {
+  container-type: inline-size;
+  filter: drop-shadow(0 24px 32px rgb(0 0 0 / 0.35));
+}
+
+.head,
+.body {
+  background: var(--surface);
+  padding: 22px 24px;
+}
+
+.head {
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  background:
+    repeating-linear-gradient(-45deg, rgb(255 255 255 / 0.04) 0 2px, transparent 2px 9px),
+    var(--ink);
+  color: var(--paper);
+  mask:
+    radial-gradient(circle 12px at 0 100%, transparent 97%, #000) left / 51% 100% no-repeat,
+    radial-gradient(circle 12px at 100% 100%, transparent 97%, #000) right / 51% 100% no-repeat;
+}
+
+.eyebrow {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent-bright);
+}
+
+.title {
+  margin: 6px 0 8px;
+  font-size: 1.5rem;
+}
+
+.meta {
+  font-size: 0.9rem;
+  color: color-mix(in srgb, var(--paper) 72%, transparent);
+}
+
+.perforation {
+  height: 2px;
+  margin: -1px 18px;
+  position: relative;
+  z-index: 1;
+  background: repeating-linear-gradient(90deg, var(--line-strong) 0 6px, transparent 6px 12px);
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+  mask:
+    radial-gradient(circle 12px at 0 0, transparent 97%, #000) left / 51% 100% no-repeat,
+    radial-gradient(circle 12px at 100% 0, transparent 97%, #000) right / 51% 100% no-repeat;
+}
+
+.hint {
+  font-size: 0.85rem;
+  color: var(--muted);
+  text-align: center;
+}
+
+.backup {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  width: 100%;
+  padding: 10px;
+  border: 1.5px dashed var(--line-strong);
+  border-radius: var(--radius-sm);
+}
+
+.backup span {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.backup strong {
+  font-family: var(--font-mono);
+  font-size: 1.15rem;
+  letter-spacing: 0.08em;
+}

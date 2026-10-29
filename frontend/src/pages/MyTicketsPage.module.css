@@ -79,10 +79,29 @@
 }
 
 .ticketMain {
+  flex: 1;
   display: grid;
-  grid-template-columns: auto auto;
+  grid-template-columns: auto 1fr;
   column-gap: 12px;
   align-items: baseline;
+}
+
+/* Vignette du QR code : un clic l'affiche en grand */
+.qrButton {
+  display: flex;
+  padding: 3px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  cursor: zoom-in;
+  transition:
+    border-color 0.15s,
+    transform 0.15s;
+}
+
+.qrButton:hover {
+  border-color: var(--ink);
+  transform: scale(1.04);
 }
 
 .ticketLabel {

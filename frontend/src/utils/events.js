@@ -49,6 +49,17 @@ export function groupTicketsByEvent(tickets) {
   return [...groups.values()];
 }
 
+/**
+ * Groupe à afficher dans « À venir et en cours » : événement en vente, ou événement qui a
+ * commencé il y a moins de 24 h et pour lequel il reste un billet à présenter à l'entrée
+ * (son statut calculé vaut déjà TERMINE, mais le spectateur a encore besoin du QR code).
+ */
+export function isCurrentGroup({ event, tickets }) {
+  if (event.statut === 'PUBLIE') return true;
+  const recent = Date.now() - new Date(event.date_debut).getTime() < 24 * HOUR;
+  return event.statut === 'TERMINE' && recent && tickets.some((t) => t.statut === 'VALIDE');
+}
+
 /** Code court lisible d'un billet : "7F3A-9C21" */
 export const shortCode = (uuid) =>
   uuid

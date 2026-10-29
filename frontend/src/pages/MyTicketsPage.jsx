@@ -10,8 +10,16 @@ import { ConfirmDialog } from '../components/ConfirmDialog';
 import { PageLoader } from '../components/Loader';
 import { Alert } from '../components/Alert';
 import { EmptyState } from '../components/EmptyState';
-import { formatDateTime, formatPrice, formatShortDate, pluralize } from '../utils/format';
-import { canCancelTicket, groupTicketsByEvent, shortCode } from '../utils/events';
+import { TicketQr } from '../components/TicketQr';
+import { TicketPassDialog } from '../components/TicketPassDialog';
+import {
+  formatDateTime,
+  formatPrice,
+  formatShortDate,
+  formatTime,
+  pluralize,
+} from '../utils/format';
+import { canCancelTicket, groupTicketsByEvent, isCurrentGroup, shortCode } from '../utils/events';
 import { getErrorMessage } from '../utils/errors';
 import styles from './MyTicketsPage.module.css';
 
@@ -21,12 +29,13 @@ export function MyTicketsPage() {
   const [toCancel, setToCancel] = useState(null); // billet sélectionné pour l'annulation
   const [cancelling, setCancelling] = useState(false);
   const [feedback, setFeedback] = useState(null);
+  const [pass, setPass] = useState(null); // billet affiché en grand : { ticket, event, numero }
 
   if (loading && !data) return <PageLoader />;
 
   const groups = data ? groupTicketsByEvent(data.data) : [];
-  const upcoming = groups.filter((g) => g.event.statut === 'PUBLIE');
-  const past = groups.filter((g) => g.event.statut !== 'PUBLIE');
+  const upcoming = groups.filter(isCurrentGroup);
+  const past = groups.filter((g) => !isCurrentGroup(g));
 
   const confirmCancel = async () => {
     setCancelling(true);
@@ -75,9 +84,14 @@ export function MyTicketsPage() {
 
         {upcoming.length > 0 && (
           <section className={styles.section}>
-            <h2 className={styles.sectionTitle}>À venir</h2>
+            <h2 className={styles.sectionTitle}>À venir et en cours</h2>
             {upcoming.map((group) => (
-              <TicketGroup key={group.event.id} group={group} onCancel={setToCancel} />
+              <TicketGroup
+                key={group.event.id}
+                group={group}
+                onCancel={setToCancel}
+                onShowPass={setPass}
+              />
             ))}
           </section>
         )}
@@ -86,7 +100,12 @@ export function MyTicketsPage() {
           <section className={styles.section}>
             <h2 className={styles.sectionTitle}>Historique</h2>
             {past.map((group) => (
-              <TicketGroup key={group.event.id} group={group} onCancel={setToCancel} />
+              <TicketGroup
+                key={group.event.id}
+                group={group}
+                onCancel={setToCancel}
+                onShowPass={setPass}
+              />
             ))}
           </section>
         )}
@@ -108,12 +127,14 @@ export function MyTicketsPage() {
           </p>
         )}
       </ConfirmDialog>
+
+      <TicketPassDialog pass={pass} onClose={() => setPass(null)} />
     </div>
   );
 }
 
 /** Un événement et ses billets, présentés comme une souche + des coupons détachables. */
-function TicketGroup({ group, onCancel }) {
+function TicketGroup({ group, onCancel, onShowPass }) {
   const { event, tickets } = group;
   const actifs = tickets.filter((t) => t.statut !== 'ANNULE').length;
 
@@ -147,15 +168,36 @@ function TicketGroup({ group, onCancel }) {
               key={ticket.id}
               className={`${styles.ticket} ${ticket.statut === 'ANNULE' ? styles.cancelled : ''}`}
             >
+              {ticket.qr_token && (
+                <button
+                  type="button"
+                  className={styles.qrButton}
+                  onClick={() => onShowPass({ ticket, event, numero: index + 1 })}
+                  aria-label={`Afficher le QR code du billet ${index + 1}`}
+                >
+                  <TicketQr value={ticket.qr_token} size={56} label="" />
+                </button>
+              )}
               <div className={styles.ticketMain}>
                 <span className={styles.ticketLabel}>Billet {index + 1}</span>
                 <span className={styles.code}>{shortCode(ticket.code)}</span>
                 <span className={styles.reserved}>
-                  Réservé le {formatShortDate(ticket.reserved_at)}
+                  {ticket.statut === 'UTILISE' && ticket.checked_in_at
+                    ? `Scanné le ${formatShortDate(ticket.checked_in_at)} à ${formatTime(ticket.checked_in_at)}`
+                    : `Réservé le ${formatShortDate(ticket.reserved_at)}`}
                 </span>
               </div>
               <div className={styles.ticketSide}>
                 <StatusBadge statut={ticket.statut} />
+                {ticket.qr_token && (
+                  <button
+                    type="button"
+                    className="btn btn-dark btn-sm"
+                    onClick={() => onShowPass({ ticket, event, numero: index + 1 })}
+                  >
+                    Afficher
+                  </button>
+                )}
                 {cancellable && (
                   <button
                     type="button"
