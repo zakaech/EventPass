@@ -39,8 +39,34 @@ Le cahier des charges complet est dans `EventPass_prompt_ClaudeCode.md`.
   du quota utilisateur (max 4 billets valides par utilisateur et par événement) dans la même
   transaction.
 
+## Commandes (depuis `backend/`)
+- `docker compose up -d` (racine) — PostgreSQL ; `npm run db:migrate` ; `npm run db:seed`
+- `npm run dev` — API sur http://localhost:3000/api/v1
+- `npm test` — Jest (recrée le schéma de `eventpass_test` puis lance les tests en série)
+- `npm run lint`
+- Collection de requêtes : `backend/requests/eventpass.http` (extension REST Client)
+- Comptes de démo (mot de passe `Password123!`) : admin@, alice@, bob@, sonora@, atlas@,
+  nouveau@ (organisateur en attente) — tous en `@eventpass.dev`
+
+## Décisions prises
+- Projet dans `C:\dev\EventPass` (hors OneDrive). Dépôt GitHub distant : pas encore configuré.
+- Quota : 4 billets max **au total** par utilisateur et par événement (VALIDE + UTILISE).
+- Index composite `tickets (event_id, user_id)` (pas d'index `tickets (event_id)` seul).
+- Filtre ville insensible à la casse (`lower(ville)`, index sur l'expression) ; filtres
+  `prix_min` / `prix_max` / `date_min` / `date_max` / `categorie`.
+- `categorie` est un ENUM PostgreSQL : CONCERT, THEATRE, SPORT, CONFERENCE, FESTIVAL,
+  EXPOSITION, AUTRE.
+- JWT envoyé dans l'en-tête `Authorization` (stocké côté frontend), pas en cookie httpOnly :
+  frontend (Vercel) et API (Render) sur des domaines différents.
+- Statut de validation de l'organisateur relu en base à chaque requête (pas dans le JWT).
+- `PUT /organisateur/events/:id` = remplacement complet ; recalcule `places_restantes`
+  sous `SELECT ... FOR UPDATE` ; refuse une capacité < billets vendus.
+- Le statut `TERMINE` n'est pas encore attribué automatiquement ; les événements passés sont
+  exclus de la liste publique par la condition `date_debut > now()`.
+- `pg` : parseurs de type pour renvoyer BIGINT et NUMERIC en `Number`.
+
 ## Avancement
-- [ ] Phase 1 — MVP backend (en cours)
+- [x] Phase 1 — MVP backend (42 tests verts, dont les tests de concurrence)
 - [ ] Phase 2 — Frontend React
 - [ ] Phase 3 — QR code et check-in
 - [ ] Phase 4 — Tests, Docker, CI
