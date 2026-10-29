@@ -31,7 +31,7 @@ async function findByUser(userId, { limit, offset }, db = pool) {
   const { rows } = await db.query(
     `SELECT t.id, t.code, t.statut, t.reserved_at, t.checked_in_at,
             e.id AS event_id, e.titre, e.date_debut, e.ville, e.lieu, e.prix,
-            e.image_url, ${statutSql('e')} AS event_statut
+            e.categorie, e.image_url, ${statutSql('e')} AS event_statut
      FROM tickets t
      JOIN events e ON e.id = t.event_id
      WHERE t.user_id = $1
