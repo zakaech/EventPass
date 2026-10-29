@@ -16,13 +16,24 @@ et l'affichage du résultat sont donc testés de bout en bout.
 Le scénario s'appuie sur les données de démo : **relancer `npm run db:seed` avant chaque
 exécution** (il réserve, annule et scanne des billets).
 
-## Lancer
+## Lancer contre la pile Docker (le plus simple, comme la CI)
+
+```bash
+docker compose down -v                                   # base vide → données de démo fraîches
+LOGIN_RATE_LIMIT_MAX=1000 docker compose up -d --build --wait
+cd e2e && npm install
+E2E_BASE_URL=http://localhost:8080 npm test
+```
+
+Sous PowerShell : `$env:LOGIN_RATE_LIMIT_MAX=1000` puis `$env:E2E_BASE_URL="http://localhost:8080"`.
+
+## Lancer en mode développement
 
 Trois terminaux, depuis la racine du dépôt :
 
 ```bash
 # 1. Base de données fraîche avec les données de démo (le script en dépend)
-docker compose up -d
+docker compose up -d db
 cd backend && npm run db:migrate && npm run db:seed
 
 # 2. API avec une limite de connexions relevée (voir plus bas)
