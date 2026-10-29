@@ -1,5 +1,7 @@
 const { Router } = require('express');
 const controller = require('../controllers/organisateurController');
+const checkinController = require('../controllers/checkinController');
+const checkinSchemas = require('../validators/checkinValidators');
 const validate = require('../middlewares/validate');
 const { authenticate, requireRole, requireOrganisateurValide } = require('../middlewares/auth');
 const schemas = require('../validators/eventValidators');
@@ -21,5 +23,8 @@ router.get(
   controller.listReservations,
 );
 router.get('/events/:id/stats', validate(schemas.byId), controller.getStats);
+
+// Contrôle des billets à l'entrée (scan du QR code ou code de secours)
+router.post('/checkin', validate(checkinSchemas.checkin), checkinController.checkIn);
 
 module.exports = router;

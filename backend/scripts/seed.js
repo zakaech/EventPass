@@ -117,6 +117,8 @@ const events = [
     40,
     30,
   ],
+  // Commencé il y a 2 h : statut calculé TERMINE, mais check-in encore ouvert (démo du scan)
+  ['sonora', 'Live au Point Éphémère', 'CONCERT', 'Paris', 'Point Éphémère', inHours(-2), 150, 20],
 ];
 
 // [utilisateur, index de l'événement, nombre de billets]
@@ -127,6 +129,8 @@ const reservations = [
   ['bob', 0, 1],
   ['bob', 6, 3], // "Session intimiste" : 3 places sur 5 vendues
   ['bob', 11, 4],
+  ['alice', 15, 2], // événement en cours : billets à scanner
+  ['bob', 15, 2],
 ];
 
 async function seed() {
@@ -185,6 +189,13 @@ async function seed() {
         [eventId, quantite],
       );
     }
+
+    // Un billet de Bob déjà scanné à l'entrée de l'événement en cours (statistiques de check-in)
+    await client.query(
+      `UPDATE tickets SET statut = 'UTILISE', checked_in_at = now() - interval '90 minutes'
+       WHERE id = (SELECT min(id) FROM tickets WHERE event_id = $1 AND user_id = $2)`,
+      [eventIds[15], userIds.bob],
+    );
   });
 
   console.log('Données de démo insérées.');

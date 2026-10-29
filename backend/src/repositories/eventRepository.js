@@ -175,7 +175,8 @@ async function getStats(id, db = pool) {
     `SELECT e.id, e.titre, e.capacite, e.places_restantes, e.prix,
             COUNT(t.id) FILTER (WHERE t.statut IN ('VALIDE', 'UTILISE')) AS billets_vendus,
             COUNT(t.id) FILTER (WHERE t.statut = 'ANNULE')               AS billets_annules,
-            COUNT(t.id) FILTER (WHERE t.statut = 'UTILISE')              AS check_ins
+            COUNT(t.id) FILTER (WHERE t.statut = 'UTILISE')              AS check_ins,
+            MAX(t.checked_in_at)                                          AS dernier_check_in
      FROM events e
      LEFT JOIN tickets t ON t.event_id = e.id
      WHERE e.id = $1

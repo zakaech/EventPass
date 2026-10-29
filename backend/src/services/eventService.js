@@ -1,4 +1,5 @@
 const { withTransaction } = require('../config/db');
+const env = require('../config/env');
 const eventRepository = require('../repositories/eventRepository');
 const ticketRepository = require('../repositories/ticketRepository');
 const { toLimitOffset, paginated } = require('../utils/pagination');
@@ -30,10 +31,22 @@ function assertOwner(event, organisateurId) {
   }
 }
 
+/**
+ * Le contrôle des billets est ouvert tant que l'événement n'est pas annulé et que
+ * date_debut + CHECKIN_WINDOW_HOURS n'est pas dépassé (donc aussi pendant l'événement,
+ * quand son statut calculé vaut déjà TERMINE). Même règle que l'UPDATE de check-in.
+ */
+function isCheckinOpen(event) {
+  const fin = new Date(event.date_debut).getTime() + env.CHECKIN_WINDOW_HOURS * 3600 * 1000;
+  return event.statut !== 'ANNULE' && Date.now() <= fin;
+}
+
+const withCheckin = (event) => ({ ...event, checkin_ouvert: isCheckinOpen(event) });
+
 async function getOwned(organisateurId, eventId) {
   const event = await eventRepository.findById(eventId);
   assertOwner(event, organisateurId);
-  return event;
+  return withCheckin(event);
 }
 
 async function listByOrganisateur(organisateurId, { page, limit }) {
@@ -41,7 +54,7 @@ async function listByOrganisateur(organisateurId, { page, limit }) {
     organisateurId,
     toLimitOffset({ page, limit }),
   );
-  return paginated(rows, total, { page, limit });
+  return paginated(rows.map(withCheckin), total, { page, limit });
 }
 
 function create(organisateurId, data) {
@@ -108,11 +121,16 @@ async function getStats(organisateurId, eventId) {
   return {
     ...stats,
     taux_remplissage: Math.round((stats.billets_vendus / stats.capacite) * 1000) / 10, // en %, 1 décimale
+    // Part des billets vendus déjà scannés à l'entrée
+    taux_presence: stats.billets_vendus
+      ? Math.round((stats.check_ins / stats.billets_vendus) * 1000) / 10
+      : 0,
     chiffre_affaires: Math.round(stats.billets_vendus * stats.prix * 100) / 100,
   };
 }
 
 module.exports = {
+  isCheckinOpen,
   listPublic,
   getById,
   getOwned,
