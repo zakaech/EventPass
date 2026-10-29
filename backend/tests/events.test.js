@@ -21,7 +21,12 @@ describe('GET /events (recherche publique)', () => {
     await createEvent(orga.id, { titre: 'B', ville: 'paris', prix: 50, categorie: 'SPORT' });
     await createEvent(orga.id, { titre: 'C', ville: 'Lyon', prix: 30, categorie: 'CONCERT' });
     await createEvent(orga.id, { titre: 'D', ville: 'Paris', prix: 0, statut: 'ANNULE' });
-    await createEvent(orga.id, { titre: 'E', ville: 'Paris', prix: 5, date_debut: daysFromNow(-1) });
+    await createEvent(orga.id, {
+      titre: 'E',
+      ville: 'Paris',
+      prix: 5,
+      date_debut: daysFromNow(-1),
+    });
   });
 
   const titres = (res) => res.body.data.map((e) => e.titre).sort();
@@ -37,7 +42,10 @@ describe('GET /events (recherche publique)', () => {
   });
 
   test('filtres prix_min / prix_max (bornes incluses) et catégorie', async () => {
-    expect(titres(await request(app).get('/api/v1/events?prix_min=10&prix_max=30'))).toEqual(['A', 'C']);
+    expect(titres(await request(app).get('/api/v1/events?prix_min=10&prix_max=30'))).toEqual([
+      'A',
+      'C',
+    ]);
     expect(titres(await request(app).get('/api/v1/events?categorie=CONCERT'))).toEqual(['A', 'C']);
   });
 
@@ -55,6 +63,62 @@ describe('GET /events (recherche publique)', () => {
 
   test('détail inexistant → 404', async () => {
     expect((await request(app).get('/api/v1/events/99999')).status).toBe(404);
+  });
+});
+
+describe('statut TERMINE calculé à la lecture', () => {
+  let orga;
+  let user;
+  let passe;
+
+  beforeAll(async () => {
+    await resetDb();
+    orga = await createOrganisateur();
+    user = await createUser();
+    passe = await createEvent(orga.user.id, { titre: 'Passé', date_debut: daysFromNow(-1) });
+    await createEvent(orga.user.id, {
+      titre: 'Annulé passé',
+      date_debut: daysFromNow(-1),
+      statut: 'ANNULE',
+    });
+    await createEvent(orga.user.id, { titre: 'À venir' });
+    // Billet acheté avant l'événement
+    await pool.query('INSERT INTO tickets (user_id, event_id) VALUES ($1, $2)', [
+      user.user.id,
+      passe.id,
+    ]);
+  });
+
+  test('la base garde PUBLIE, mais l’API renvoie TERMINE', async () => {
+    const { rows } = await pool.query('SELECT statut FROM events WHERE id = $1', [passe.id]);
+    expect(rows[0].statut).toBe('PUBLIE');
+
+    const res = await request(app).get(`/api/v1/events/${passe.id}`);
+    expect(res.body.event.statut).toBe('TERMINE');
+  });
+
+  test('statut cohérent dans la liste organisateur et dans "mes billets"', async () => {
+    const liste = await request(app).get('/api/v1/organisateur/events').set(auth(orga.token));
+    const statuts = Object.fromEntries(liste.body.data.map((e) => [e.titre, e.statut]));
+    expect(statuts).toEqual({ Passé: 'TERMINE', 'Annulé passé': 'ANNULE', 'À venir': 'PUBLIE' });
+
+    const billets = await request(app).get('/api/v1/me/tickets').set(auth(user.token));
+    expect(billets.body.data[0].event_statut).toBe('TERMINE');
+  });
+
+  test('un événement terminé ne peut être ni réservé ni modifié', async () => {
+    const reservation = await request(app)
+      .post(`/api/v1/events/${passe.id}/tickets`)
+      .set(auth(user.token))
+      .send({ quantite: 1 });
+    expect(reservation.status).toBe(409);
+    expect(reservation.body.error.code).toBe('EVENEMENT_PASSE');
+
+    const annulation = await request(app)
+      .patch(`/api/v1/organisateur/events/${passe.id}/annuler`)
+      .set(auth(orga.token));
+    expect(annulation.status).toBe(409);
+    expect(annulation.body.error.code).toBe('EVENEMENT_NON_MODIFIABLE');
   });
 });
 
@@ -121,7 +185,7 @@ describe('Espace organisateur', () => {
     expect(refus.body.error.code).toBe('CAPACITE_INSUFFISANTE');
   });
 
-  test("annuler un événement annule ses billets et le retire de la liste publique", async () => {
+  test('annuler un événement annule ses billets et le retire de la liste publique', async () => {
     const event = await createEvent(orga.user.id);
     await request(app)
       .post(`/api/v1/events/${event.id}/tickets`)

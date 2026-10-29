@@ -1,6 +1,9 @@
 const { pool } = require('../config/db');
+const { eventColumns } = require('./eventColumns');
 
-const COLUMNS_WITH_ORGANISATION = 'e.*, o.nom_organisation';
+const COLUMNS_WITH_ORGANISATION = `${eventColumns('e')}, o.nom_organisation`;
+// Pour RETURNING (UPDATE/INSERT sans alias) : la table elle-même sert de préfixe
+const RETURNING = `RETURNING ${eventColumns('events')}`;
 
 /**
  * Construit le WHERE de la recherche publique à partir des filtres présents.
@@ -58,13 +61,16 @@ async function findById(id, db = pool) {
  * À utiliser uniquement avec un client de transaction.
  */
 async function findByIdForUpdate(id, client) {
-  const { rows } = await client.query('SELECT * FROM events WHERE id = $1 FOR UPDATE', [id]);
+  const { rows } = await client.query(
+    `SELECT ${eventColumns('events')} FROM events WHERE id = $1 FOR UPDATE`,
+    [id],
+  );
   return rows[0] ?? null;
 }
 
 async function findByOrganisateur(organisateurId, { limit, offset }, db = pool) {
   const { rows } = await db.query(
-    `SELECT * FROM events
+    `SELECT ${eventColumns('events')} FROM events
      WHERE organisateur_id = $1
      ORDER BY date_debut DESC, id DESC
      LIMIT $2 OFFSET $3`,
@@ -81,7 +87,7 @@ async function create(organisateurId, data, db = pool) {
     `INSERT INTO events (organisateur_id, titre, description, categorie, ville, lieu,
                          date_debut, capacite, places_restantes, prix, image_url)
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $8, $9, $10)
-     RETURNING *`,
+     ${RETURNING}`,
     [
       organisateurId,
       data.titre,
@@ -104,7 +110,7 @@ async function update(id, data, placesRestantes, db = pool) {
      SET titre = $2, description = $3, categorie = $4, ville = $5, lieu = $6,
          date_debut = $7, capacite = $8, places_restantes = $9, prix = $10, image_url = $11
      WHERE id = $1
-     RETURNING *`,
+     ${RETURNING}`,
     [
       id,
       data.titre,
@@ -123,7 +129,7 @@ async function update(id, data, placesRestantes, db = pool) {
 }
 
 async function updateStatut(id, statut, db = pool) {
-  const { rows } = await db.query('UPDATE events SET statut = $2 WHERE id = $1 RETURNING *', [
+  const { rows } = await db.query(`UPDATE events SET statut = $2 WHERE id = $1 ${RETURNING}`, [
     id,
     statut,
   ]);
@@ -145,7 +151,7 @@ async function decrementPlaces(id, quantite, client) {
        AND statut = 'PUBLIE'
        AND date_debut > now()
        AND places_restantes >= $2
-     RETURNING *`,
+     ${RETURNING}`,
     [id, quantite],
   );
   return rows[0] ?? null;
@@ -153,7 +159,7 @@ async function decrementPlaces(id, quantite, client) {
 
 async function incrementPlaces(id, quantite, client) {
   const { rows } = await client.query(
-    'UPDATE events SET places_restantes = places_restantes + $2 WHERE id = $1 RETURNING *',
+    `UPDATE events SET places_restantes = places_restantes + $2 WHERE id = $1 ${RETURNING}`,
     [id, quantite],
   );
   return rows[0];

@@ -1,4 +1,5 @@
 const { pool } = require('../config/db');
+const { statutSql } = require('./eventColumns');
 
 /** Crée `quantite` billets en une seule requête grâce à generate_series. */
 async function createMany(userId, eventId, quantite, client) {
@@ -30,7 +31,7 @@ async function findByUser(userId, { limit, offset }, db = pool) {
   const { rows } = await db.query(
     `SELECT t.id, t.code, t.statut, t.reserved_at, t.checked_in_at,
             e.id AS event_id, e.titre, e.date_debut, e.ville, e.lieu, e.prix,
-            e.image_url, e.statut AS event_statut
+            e.image_url, ${statutSql('e')} AS event_statut
      FROM tickets t
      JOIN events e ON e.id = t.event_id
      WHERE t.user_id = $1
@@ -38,7 +39,9 @@ async function findByUser(userId, { limit, offset }, db = pool) {
      LIMIT $2 OFFSET $3`,
     [userId, limit, offset],
   );
-  const count = await db.query('SELECT COUNT(*) AS total FROM tickets WHERE user_id = $1', [userId]);
+  const count = await db.query('SELECT COUNT(*) AS total FROM tickets WHERE user_id = $1', [
+    userId,
+  ]);
   return { rows, total: count.rows[0].total };
 }
 
@@ -53,7 +56,9 @@ async function findByEvent(eventId, { limit, offset }, db = pool) {
      LIMIT $2 OFFSET $3`,
     [eventId, limit, offset],
   );
-  const count = await db.query('SELECT COUNT(*) AS total FROM tickets WHERE event_id = $1', [eventId]);
+  const count = await db.query('SELECT COUNT(*) AS total FROM tickets WHERE event_id = $1', [
+    eventId,
+  ]);
   return { rows, total: count.rows[0].total };
 }
 

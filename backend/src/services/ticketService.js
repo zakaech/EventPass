@@ -15,11 +15,15 @@ async function explainReservationFailure(eventId, quantite, client) {
   if (!event) {
     throw new NotFoundError('Événement introuvable');
   }
-  if (event.statut !== 'PUBLIE') {
-    throw new ConflictError("Cet événement n'est plus disponible à la réservation", 'EVENEMENT_INDISPONIBLE');
+  // event.statut est le statut calculé : TERMINE dès que la date est passée
+  if (event.statut === 'TERMINE') {
+    throw new ConflictError('Cet événement est terminé', 'EVENEMENT_PASSE');
   }
-  if (event.date_debut <= new Date()) {
-    throw new ConflictError('Cet événement a déjà commencé', 'EVENEMENT_PASSE');
+  if (event.statut !== 'PUBLIE') {
+    throw new ConflictError(
+      "Cet événement n'est plus disponible à la réservation",
+      'EVENEMENT_INDISPONIBLE',
+    );
   }
   throw new ConflictError(
     `Places insuffisantes : ${event.places_restantes} restante(s), ${quantite} demandée(s)`,
