@@ -24,8 +24,19 @@ Le cahier des charges complet est dans `EventPass_prompt_ClaudeCode.md`.
   Une seule instance avec deux bases : `eventpass` (dev) et `eventpass_test` (tests).
 - **Auth** : JWT (en-tête `Authorization: Bearer`, durée configurable `JWT_EXPIRES_IN`) + bcrypt.
 - **Validation** : zod. **Sécurité** : helmet, CORS, express-rate-limit sur le login.
-- **Tests** : Jest + Supertest sur la base `eventpass_test` ; bout en bout : Playwright dans
-  `e2e/` (voir `e2e/README.md`).
+- **Tests** : Jest en deux projets — `tests/unit/` (services isolés, `jest.mock` des
+  repositories et de `config/db`, pas de base) et `tests/integration/` (Supertest sur la base
+  `eventpass_test`, `globalSetup` qui recrée le schéma). Seuils de couverture dans
+  `jest.config.js` (90 % lignes/fonctions/instructions, 80 % branches) : la CI échoue en dessous.
+  Bout en bout : Playwright dans `e2e/` (voir `e2e/README.md`).
+- **Docker** : `backend/Dockerfile` et `frontend/Dockerfile` multi-étapes, utilisateurs non-root
+  (`node`, Nginx « unprivileged » sur le port 8080). Le conteneur backend lance
+  `scripts/docker-entrypoint.sh` : secrets aléatoires si `GENERATE_DEV_SECRETS=true` et absents,
+  migrations, `seed.js --if-empty` si `SEED_DEMO=true`, puis `exec node src/server.js`.
+  `frontend/nginx.conf` : `try_files … /index.html` (SPA) et proxy `/api/` → `backend:3000`.
+- **CI** : `.github/workflows/ci.yml` — jobs backend (service PostgreSQL, secrets aléatoires,
+  lint, `test:coverage`, résumé + artefact), frontend (lint, build), docker (compose up --wait +
+  curl), e2e (après backend et frontend : pile Docker + Playwright Chromium, captures en artefact).
 - **Frontend** (`frontend/`) : React 19 + Vite 8 (ES modules), React Router 8 (mode déclaratif
   `BrowserRouter`/`Routes`), Context API, axios. CSS Modules + variables CSS globales.
   Lint : oxlint (`npm run lint`). Polices auto-hébergées via `@fontsource-variable`.
@@ -41,15 +52,17 @@ Le cahier des charges complet est dans `EventPass_prompt_ClaudeCode.md`.
 - `QR_SECRET` obligatoire, ≥ 32 caractères, **différent** de `JWT_SECRET` (vérifié au démarrage).
 - `POST /organisateur/checkin { event_id, token }` (token = QR ou code de secours). Signature
   vérifiée AVANT toute requête SQL, puis UN seul `UPDATE … WHERE statut = 'VALIDE' AND
-  event_id = $2 AND e.organisateur_id = $3 AND e.statut = 'PUBLIE' AND now() <= date_debut +
-  CHECKIN_WINDOW_HOURS`. Si 0 ligne : relecture pour le message. Codes d'erreur :
-  `QR_INVALIDE` (400), `DEJA_UTILISE` (409, `details.checked_in_at`), `BILLET_ANNULE`,
-  `AUTRE_EVENEMENT` (titre en `details` seulement si même organisateur), `EVENEMENT_ANNULE`,
+  event_id = $2 AND e.organisateur_id = $3 AND e.statut = 'PUBLIE' AND now() BETWEEN
+  date_debut - CHECKIN_OPENS_HOURS_BEFORE AND date_debut + CHECKIN_WINDOW_HOURS`. Si 0 ligne :
+  relecture pour le message. Codes d'erreur : `QR_INVALIDE` (400), `DEJA_UTILISE` (409,
+  `details.checked_in_at`), `BILLET_ANNULE`, `AUTRE_EVENEMENT` (titre en `details` seulement si
+  même organisateur), `EVENEMENT_ANNULE`, `CHECKIN_PAS_ENCORE_OUVERT` (`details.ouverture`),
   `CHECKIN_FERME` (409), 403/404 si l'événement n'est pas à l'organisateur.
 - Le check-in utilise le statut **stocké** (`PUBLIE`), pas le statut calculé : un événement est
-  `TERMINE` dès `date_debut` mais reste contrôlable jusqu'à `date_debut + CHECKIN_WINDOW_HOURS`
-  (défaut 12). Pas de borne basse (on peut scanner avant l'ouverture des portes).
-  `checkin_ouvert` est calculé côté service (`eventService.isCheckinOpen`).
+  `TERMINE` dès `date_debut` mais reste contrôlable de `date_debut − 6 h` à `date_debut + 12 h`
+  (`CHECKIN_OPENS_HOURS_BEFORE`, `CHECKIN_WINDOW_HOURS`). `eventService.checkinWindow` /
+  `isCheckinOpen` ajoutent `checkin_ouvert`, `checkin_ouverture`, `checkin_fermeture` aux
+  événements de l'organisateur. Le scanner ne propose que les événements ouverts.
 - Tests de concurrence du check-in : passer par le **service** (Promise.allSettled), car via HTTP
   les middlewares étalent les requêtes et un check-in non atomique passerait quand même.
 - Test caméra sur téléphone : `npm run dev:phone` (HTTPS auto-signé + `--host`), API relayée par
@@ -99,10 +112,11 @@ Le cahier des charges complet est dans `EventPass_prompt_ClaudeCode.md`.
   transaction.
 
 ## Commandes
-- `docker compose up -d` (racine) — PostgreSQL
+- `docker compose up --build` (racine) — toute la pile sur http://localhost:8080 ;
+  `docker compose up -d db` — PostgreSQL seul pour le développement (`npm run dev`)
 - `backend/` : `npm run db:migrate` ; `npm run db:seed` ; `npm run dev` (API sur
-  http://localhost:3000/api/v1) ; `npm test` (Jest : recrée le schéma de `eventpass_test` puis
-  lance les tests en série) ; `npm run lint`
+  http://localhost:3000/api/v1) ; `npm test` (tout) ; `npm run test:unit` (sans base) ;
+  `npm run test:integration` ; `npm run test:coverage` ; `npm run lint`
 - `frontend/` : `npm run dev` (http://localhost:5173) ; `npm run dev:phone` (HTTPS, réseau
   local, pour tester la caméra sur téléphone) ; `npm run build` ; `npm run lint`
 - `e2e/` : `npm test` — après `npm run db:seed`, API lancée avec `LOGIN_RATE_LIMIT_MAX=1000`
@@ -115,7 +129,13 @@ Le cahier des charges complet est dans `EventPass_prompt_ClaudeCode.md`.
 
 ## Décisions prises
 - Projet dans `C:\dev\EventPass` (hors OneDrive). Remote `origin` = GitHub (push par HTTPS,
-  CLI `gh` non installée). `EventPass_prompt_ClaudeCode.md` est ignoré par git.
+  CLI `gh` non installée ; API GitHub appelée avec l'identifiant enregistré par Git, sans
+  jamais l'afficher). **Dépôt privé** à ce jour : le badge CI ne s'affiche qu'aux membres.
+  `EventPass_prompt_ClaudeCode.md` est ignoré par git.
+- `TRUST_PROXY` = nombre de proxys devant l'API (1 derrière Nginx ou Render) : sans lui, la
+  limite de connexions verrait une seule IP (celle du proxy).
+- Seed : `npm run db:seed` vide la base (refusé en production) ; `--if-empty` n'insère que si
+  aucun compte n'existe (seul mode autorisé en production, utilisé par Docker).
 - Captures d'écran pour le README : `docs/screenshots/` (desktop `NN-*.png`, mobile `m-NN-*.png`),
   régénérées par le scénario e2e puis recopiées.
 - Quota : 4 billets max **au total** par utilisateur et par événement (VALIDE + UTILISE).
@@ -143,5 +163,8 @@ Le cahier des charges complet est dans `EventPass_prompt_ClaudeCode.md`.
 - [x] Phase 3 — QR code et check-in — 73 tests Jest (dont 18 check-in, 10 signature) ; scénario
   e2e de 31 étapes, dont un scan réel par caméra simulée sur téléphone (valide puis déjà
   utilisé) et saisie manuelle (secours, falsifié, autre événement/organisateur, annulé).
-- [ ] Phase 4 — Tests, Docker, CI
+- [x] Phase 4 — Tests, Docker, CI — 131 tests Jest (≈ 60 unitaires avec `jest.mock`, ≈ 70
+  d'intégration), couverture ≈ 97 % des lignes ; `docker compose up` vérifié depuis une base
+  vide ; e2e vert deux fois de suite contre la pile Docker ; CI verte sur `main` ; CI rouge
+  prouvée sur une PR de démonstration (fermée, branche supprimée) ; README complet.
 - [ ] Phase 5 — Déploiement
