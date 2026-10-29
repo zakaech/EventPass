@@ -26,6 +26,9 @@ const schema = z
     CORS_ORIGIN: z.string().default('http://localhost:5173'),
     LOGIN_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(10),
     LOGIN_RATE_LIMIT_WINDOW_MINUTES: z.coerce.number().int().positive().default(15),
+    // Nombre de proxys de confiance devant l'API (Nginx en Docker, Render en production).
+    // 0 = aucun : l'adresse IP du client est celle de la connexion TCP.
+    TRUST_PROXY: z.coerce.number().int().min(0).max(5).default(0),
   })
   .refine((e) => e.QR_SECRET !== e.JWT_SECRET, {
     message: 'QR_SECRET doit être différent de JWT_SECRET',

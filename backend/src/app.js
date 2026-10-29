@@ -10,6 +10,13 @@ const { errorHandler, notFound } = require('./middlewares/errorHandler');
 // directement dans les tests, sans ouvrir de port réseau.
 const app = express();
 
+// Derrière un proxy (Nginx, Render), la connexion TCP vient du proxy : sans ce réglage,
+// tous les clients auraient la même IP et la limite de tentatives de connexion serait
+// partagée par tout le monde. Avec N proxys de confiance, Express lit la vraie IP dans
+// l'en-tête X-Forwarded-For. On ne fait confiance qu'au nombre de proxys réellement
+// présents : sinon un client pourrait inventer son IP en envoyant cet en-tête.
+app.set('trust proxy', env.TRUST_PROXY);
+
 // helmet ajoute des en-têtes HTTP de sécurité (anti-sniffing MIME, anti-clickjacking...)
 app.use(helmet());
 

@@ -1,8 +1,9 @@
 const { Router } = require('express');
+const { health } = require('../controllers/healthController');
 
 const router = Router();
 
-router.get('/health', (req, res) => res.json({ status: 'ok' }));
+router.get('/health', health);
 
 router.use('/auth', require('./authRoutes'));
 router.use('/events', require('./eventRoutes'));
