@@ -2,7 +2,9 @@
 // Prérequis et lancement : voir e2e/README.md.
 import { chromium } from 'playwright';
 import { mkdirSync } from 'node:fs';
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { writeQrVideo } from './lib/fakeCamera.mjs';
 
 const BASE = process.env.E2E_BASE_URL ?? 'http://localhost:5173';
 // Navigateur : Edge (installé sur Windows) par défaut, ou "chrome", ou "chromium"
@@ -271,6 +273,178 @@ await check('ORGANISATEUR : annulation de l’événement (dialogue de confirmat
   await expectVisible(page.getByText('Événement annulé. 1 billet(s) annulé(s).'));
   await page.getByRole('link', { name: '← Mes événements' }).click();
   await expectVisible(page.locator('li', { hasText: 'Soirée impro test' }).getByText('Annulé').first());
+  await logout();
+});
+
+// ---------------------------------------------------------------- Phase 3 : QR code et check-in
+// Appel direct de l'API depuis la page, avec le jeton de la session (préparation de données)
+const api = (path, options = {}) =>
+  page.evaluate(
+    async ({ path, options }) => {
+      const token = localStorage.getItem('eventpass.token');
+      const res = await fetch(`/api/v1${path}`, {
+        ...options,
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      });
+      return { status: res.status, body: await res.json() };
+    },
+    { path, options },
+  );
+
+const loginDemo = async (email, home) => {
+  await page.goto(`${BASE}/connexion`);
+  await page.getByRole('button', { name: email }).click();
+  await page.waitForURL(BASE + home);
+};
+
+let billets;
+await check('USER : QR code et code de secours dans « Mes billets »', async () => {
+  await loginDemo('alice@eventpass.dev', '/mes-billets');
+  // Événement commencé il y a 2 h (statut TERMINE) : toujours dans « À venir et en cours »
+  await expectVisible(page.getByRole('heading', { name: 'À venir et en cours' }));
+  const groupe = page.locator('article', { hasText: 'Live au Point Éphémère' });
+  await groupe.getByRole('button', { name: 'Afficher' }).first().click();
+  const dialog = page.getByRole('dialog', { name: 'Billet à présenter à l’entrée' });
+  await expectVisible(dialog.getByRole('img', { name: 'QR code à scanner' }));
+  await expectVisible(dialog.getByText(/^[0-9A-F]{4}(-[0-9A-F]{4}){3}$/));
+  await shot('15-billet-qr');
+  await dialog.getByRole('button', { name: 'Fermer' }).click();
+
+  // Préparation : jetons des billets d'Alice (ceux que l'interface affiche) et un billet
+  // annulé, dont on garde le jeton obtenu quand il était encore valide.
+  await api('/events/1/tickets', { method: 'POST', body: JSON.stringify({ quantite: 1 }) });
+  const { body } = await api('/me/tickets?limit=50');
+  const valides = (titre) => body.data.filter((t) => t.titre === titre && t.statut === 'VALIDE');
+  const [live1, live2] = valides('Live au Point Éphémère');
+  const nuit = valides('Nuit Électro');
+  const annule = nuit.at(-1);
+  await api(`/me/tickets/${annule.id}/annuler`, { method: 'PATCH' });
+  billets = {
+    camera: live1,
+    manuel: live2,
+    autreEvenement: nuit[0],
+    autreOrganisateur: valides('DevConf Lyon 2026')[0],
+    annule,
+  };
+  if (Object.values(billets).some((b) => !b?.qr_token)) {
+    throw new Error('Données de démo inattendues : relancer npm run db:seed');
+  }
+  await logout();
+});
+
+await check('ORGANISATEUR (téléphone, caméra) : billet valide puis second scan refusé', async () => {
+  // Fausse webcam qui filme le QR code du premier billet d'Alice
+  const video = join(SHOTS, 'camera-qr.y4m');
+  writeQrVideo(billets.camera.qr_token, video);
+  const phoneBrowser = await chromium.launch({
+    channel: CHANNEL,
+    args: [
+      '--use-fake-ui-for-media-stream', // accepte la demande d'accès à la caméra
+      '--use-fake-device-for-media-stream',
+      `--use-file-for-fake-video-capture=${video}`,
+    ],
+  });
+  const phone = await (
+    await phoneBrowser.newContext({ viewport: { width: 390, height: 844 }, locale: 'fr-FR' })
+  ).newPage();
+  phone.on('pageerror', (e) => consoleErrors.push(e.message));
+  try {
+    await phone.goto(`${BASE}/connexion`);
+    await phone.getByRole('button', { name: 'sonora@eventpass.dev' }).click();
+    await phone.waitForURL(`${BASE}/organisateur`);
+    await phone.goto(`${BASE}/organisateur/scanner`);
+    await expectVisible(phone.getByRole('heading', { name: 'Live au Point Éphémère' }));
+    await phone.screenshot({ path: `${SHOTS}m-09-scanner.png` });
+
+    await phone.getByRole('button', { name: 'Activer la caméra' }).click();
+    // Bloc de résultat (role="alert") ; le même titre figure aussi dans l'historique
+    const resultat = (titre) => phone.locator('[role=alert]', { hasText: titre });
+    await resultat('Entrée validée').waitFor({ timeout: 15000 });
+    await expectVisible(resultat('Entrée validée').getByText('Alice Martin'));
+    await phone.screenshot({ path: `${SHOTS}m-10-scan-valide.png` });
+
+    // La caméra filme toujours le même billet : le scan suivant doit être refusé
+    await phone.getByRole('button', { name: 'Scanner le suivant' }).click();
+    await resultat('Déjà utilisé').waitFor({ timeout: 15000 });
+    await expectVisible(resultat('Déjà utilisé').getByText(/Premier scan à \d{2}:\d{2}/));
+    await phone.screenshot({ path: `${SHOTS}m-11-scan-deja-utilise.png` });
+  } catch (error) {
+    await phone.screenshot({ path: `${SHOTS}ECHEC-telephone.png` });
+    throw error;
+  } finally {
+    await phoneBrowser.close();
+  }
+});
+
+// Saisie dans le champ « Saisie manuelle », puis vérification du résultat affiché
+const manualScan = async (value, titre, detail) => {
+  await page.getByLabel('Saisie manuelle').fill(value);
+  await page.getByRole('button', { name: 'Vérifier' }).click();
+  const resultat = page.locator('[role=alert]', { hasText: titre });
+  await expectVisible(resultat);
+  if (detail) await expectVisible(resultat.getByText(detail));
+};
+const next = () => page.getByRole('button', { name: 'Scanner le suivant' }).click();
+
+await check('ORGANISATEUR : code de secours saisi à la main (minuscules) → valide', async () => {
+  await loginDemo('sonora@eventpass.dev', '/organisateur');
+  await page.getByRole('link', { name: 'Scanner', exact: true }).click();
+  await manualScan(billets.manuel.code_secours.toLowerCase(), 'Entrée validée', 'Alice Martin');
+  await shot('16-scan-saisie-manuelle');
+  await next();
+});
+
+await check('ORGANISATEUR : QR falsifié et code inventé → « QR code invalide »', async () => {
+  const token = billets.autreEvenement.qr_token;
+  const falsifie = token.slice(0, -3) + (token.endsWith('AAA') ? 'BBB' : 'AAA');
+  await manualScan(falsifie, 'QR code invalide', 'Billet falsifié, modifié ou illisible.');
+  await shot('17-scan-qr-invalide');
+  await next();
+  await manualScan('1234-ABCD-5678-EF90', 'QR code invalide');
+  await next();
+});
+
+await check('ORGANISATEUR : billet d’un autre événement / d’un autre organisateur', async () => {
+  await manualScan(
+    billets.autreEvenement.qr_token,
+    'Autre événement',
+    'Billet valable pour « Nuit Électro »',
+  );
+  await next();
+  // Billet d'Atlas Events : refusé sans révéler de quel événement il s'agit
+  await manualScan(
+    billets.autreOrganisateur.qr_token,
+    'Autre événement',
+    'Ce billet n’est pas valable pour cet événement.',
+  );
+  await next();
+});
+
+await check('ORGANISATEUR : billet annulé → « Billet annulé »', async () => {
+  await page.getByLabel('Événement contrôlé').selectOption('1'); // id de « Nuit Électro »
+  await expectVisible(page.getByRole('heading', { name: 'Nuit Électro' }));
+  await manualScan(billets.annule.qr_token, 'Billet annulé');
+  await next();
+});
+
+await check('ORGANISATEUR : statistiques de check-in à jour', async () => {
+  await page.goto(`${BASE}/organisateur`);
+  await page
+    .locator('li', { hasText: 'Live au Point Éphémère' })
+    .getByRole('link', { name: 'Gérer' })
+    .click();
+  // 4 billets vendus, 3 scannés : 1 dans le seed + caméra + saisie manuelle
+  await expectVisible(page.getByText(/75 % des billets · dernier à/));
+  const heures = await page.locator('tbody td').filter({ hasText: /^\d{2}:\d{2}$/ }).count();
+  if (heures !== 3) throw new Error(`${heures} heures d'entrée affichées au lieu de 3`);
+  await shot('18-stats-checkin');
+  await logout();
+});
+
+await check('USER : le billet scanné apparaît comme utilisé', async () => {
+  await loginDemo('alice@eventpass.dev', '/mes-billets');
+  const groupe = page.locator('article', { hasText: 'Live au Point Éphémère' });
+  await expectVisible(groupe.getByText(/Scanné le/));
   await logout();
 });
 

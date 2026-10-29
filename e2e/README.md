@@ -4,7 +4,17 @@
 visiteur, spectateur (inscription, réservation, annulation), organisateur (inscription,
 création/modification/annulation d'événement, check-in) et admin (validation des comptes).
 Il vérifie aussi l'intercepteur 401 et l'absence de défilement horizontal sur mobile (390 px).
-Les captures d'écran sont écrites dans `e2e/screenshots/` (non versionné).
+Les captures d'écran sont écrites dans `e2e/screenshots/` (non versionné) ; les plus utiles
+sont recopiées à la main dans `docs/screenshots/`.
+
+**Check-in avec une vraie caméra (simulée).** Pour le scan, le script lance un second
+navigateur au format téléphone dont la webcam est remplacée par une vidéo : `lib/fakeCamera.mjs`
+fabrique un fichier `.y4m` qui montre le QR code d'un vrai billet, et Chromium le diffuse
+comme flux de caméra (`--use-file-for-fake-video-capture`). Le décodage du QR, l'appel à l'API
+et l'affichage du résultat sont donc testés de bout en bout.
+
+Le scénario s'appuie sur les données de démo : **relancer `npm run db:seed` avant chaque
+exécution** (il réserve, annule et scanne des billets).
 
 ## Lancer
 
