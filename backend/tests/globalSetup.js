@@ -20,6 +20,6 @@ module.exports = async () => {
     });
   } catch (error) {
     console.error(error.stdout?.toString(), error.stderr?.toString());
-    throw new Error('Échec des migrations sur la base de test');
+    throw new Error('Échec des migrations sur la base de test', { cause: error });
   }
 };
