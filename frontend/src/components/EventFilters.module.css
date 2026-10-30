@@ -26,6 +26,12 @@
   gap: 8px;
 }
 
+/* Un élément de grille ne rétrécit pas sous la largeur minimale de son contenu
+   (min-width: auto) : sans ceci, un champ date au format « mm/dd/yyyy » déborde. */
+.pair > * {
+  min-width: 0;
+}
+
 .actions {
   display: flex;
   flex-direction: column;
