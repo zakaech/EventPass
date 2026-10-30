@@ -1,0 +1,52 @@
+.banner {
+  position: fixed;
+  left: 50%;
+  bottom: 20px;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: max-content;
+  max-width: calc(100vw - 32px);
+  padding: 14px 20px;
+  border-radius: var(--radius);
+  background: var(--ink);
+  color: var(--paper);
+  box-shadow: var(--shadow-lg);
+  transform: translateX(-50%);
+  animation: rise 0.3s ease-out;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 12px);
+  }
+}
+
+.banner strong {
+  display: block;
+  font-size: 0.95rem;
+}
+
+.detail {
+  display: block;
+  font-size: 0.82rem;
+  color: color-mix(in srgb, var(--paper) 70%, transparent);
+}
+
+.spinner {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  border: 3px solid rgb(255 255 255 / 0.2);
+  border-top-color: var(--accent-bright);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

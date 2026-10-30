@@ -1,6 +1,7 @@
 import { Outlet } from 'react-router';
 import { Header } from './Header';
 import { Logo } from './Logo';
+import { ServerWakeBanner } from './ServerWakeBanner';
 import styles from './Layout.module.css';
 
 // Mise en page commune : <Outlet /> est remplacé par la page de la route active.
@@ -20,6 +21,7 @@ export function Layout() {
           <p>Billetterie d’événements — projet de portfolio.</p>
         </div>
       </footer>
+      <ServerWakeBanner />
     </div>
   );
 }
