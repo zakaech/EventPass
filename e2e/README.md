@@ -60,6 +60,27 @@ contre la force brute). Le scénario se connecte et se déconnecte une dizaine d
 la même IP : avec la limite par défaut, une deuxième exécution rapprochée recevrait des
 réponses `429` et échouerait. On relève donc la limite uniquement pour ce lancement.
 
+## Vérifier le site déployé : `production.mjs`
+
+Scénario plus court (11 étapes) adapté à la production : il crée ses propres données au lieu
+de dépendre de l'état de la démo, ne se connecte que 3 fois (limite de 10 connexions par
+15 minutes) et vérifie que l'admin de démo est bien en lecture seule. L'API étant sur un autre
+domaine que le site, son URL est demandée à part.
+
+```bash
+E2E_BASE_URL=https://<projet>.vercel.app \
+E2E_API_URL=https://<service>.onrender.com/api/v1 \
+node production.mjs
+```
+
+Pour l'essayer en local avec la même configuration que la démo en ligne :
+
+```bash
+docker compose down -v
+READ_ONLY_EMAILS=admin@eventpass.dev DEMO_RESET_ON_START=true docker compose up -d --build --wait
+E2E_BASE_URL=http://localhost:8080 E2E_API_URL=http://localhost:8080/api/v1 node production.mjs
+```
+
 ## Options
 
 | Variable | Défaut | Rôle |
