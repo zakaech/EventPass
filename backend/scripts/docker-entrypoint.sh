@@ -23,7 +23,12 @@ fi
 echo "Migrations…"
 node scripts/migrate.js up
 
-if [ "$SEED_DEMO" = "true" ]; then
+if [ "$DEMO_RESET_ON_START" = "true" ]; then
+  # Démo publique : données remises à neuf à chaque démarrage (dates relatives à
+  # aujourd'hui, billets à scanner disponibles, modifications des visiteurs effacées)
+  echo "Démo : réinitialisation des données…"
+  node scripts/seed.js --demo-reset
+elif [ "$SEED_DEMO" = "true" ]; then
   echo "Données de démo (seulement si la base est vide)…"
   node scripts/seed.js --if-empty
 fi

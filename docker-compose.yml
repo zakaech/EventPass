@@ -7,6 +7,7 @@
 # Variables facultatives (fichier .env à la racine ou variables du terminal) :
 #   JWT_SECRET, QR_SECRET   secrets fixes (sinon générés au hasard à chaque démarrage)
 #   SEED_DEMO=false         ne pas insérer les données de démo
+#   READ_ONLY_EMAILS=admin@eventpass.dev, DEMO_RESET_ON_START=true   comme la démo en ligne
 #   FRONTEND_PORT=8081      autre port pour l'interface
 
 services:
@@ -48,6 +49,9 @@ services:
       CORS_ORIGIN: http://localhost:${FRONTEND_PORT:-8080}
       TRUST_PROXY: 1 # Nginx est devant l'API
       LOGIN_RATE_LIMIT_MAX: ${LOGIN_RATE_LIMIT_MAX:-10}
+      # Réglages de la démo publique (désactivés en local par défaut)
+      READ_ONLY_EMAILS: ${READ_ONLY_EMAILS:-}
+      DEMO_RESET_ON_START: ${DEMO_RESET_ON_START:-false}
     depends_on:
       db:
         condition: service_healthy # attend que PostgreSQL accepte les connexions

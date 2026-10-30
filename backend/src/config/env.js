@@ -29,6 +29,11 @@ const schema = z
     // Nombre de proxys de confiance devant l'API (Nginx en Docker, Render en production).
     // 0 = aucun : l'adresse IP du client est celle de la connexion TCP.
     TRUST_PROXY: z.coerce.number().int().min(0).max(5).default(0),
+    // Comptes en lecture seule (emails séparés par des virgules) : en production, le compte
+    // admin de démo peut tout consulter mais aucune de ses actions d'écriture n'est acceptée.
+    READ_ONLY_EMAILS: z.string().default(''),
+    // Démo publique : remettre les données de démo à zéro à chaque démarrage du serveur
+    DEMO_RESET_ON_START: z.enum(['true', 'false']).default('false'),
   })
   .refine((e) => e.QR_SECRET !== e.JWT_SECRET, {
     message: 'QR_SECRET doit être différent de JWT_SECRET',
@@ -63,5 +68,9 @@ if (/^\d+$/.test(env.JWT_EXPIRES_IN)) {
 }
 
 env.CORS_ORIGIN = env.CORS_ORIGIN.split(',').map((origin) => origin.trim());
+
+env.READ_ONLY_EMAILS = env.READ_ONLY_EMAILS.split(',')
+  .map((email) => email.trim().toLowerCase())
+  .filter(Boolean);
 
 module.exports = env;

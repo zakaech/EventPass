@@ -3,14 +3,18 @@
 //   npm run db:seed                     → vide la base puis la remplit (développement)
 //   node scripts/seed.js --if-empty     → ne fait rien si la base contient déjà des comptes
 //                                         (utilisé au démarrage du conteneur Docker)
+//   node scripts/seed.js --demo-reset   → démo publique : vide et remplit la base, autorisé
+//                                         en production SEULEMENT si DEMO_RESET_ON_START=true
 const { pool, withTransaction } = require('../src/config/db');
 const env = require('../src/config/env');
 const { hashPassword } = require('../src/utils/password');
 
 const IF_EMPTY = process.argv.includes('--if-empty');
+const DEMO_RESET = process.argv.includes('--demo-reset') && env.DEMO_RESET_ON_START === 'true';
 
-// En production, seul le mode --if-empty est autorisé : il ne peut jamais effacer de données.
-if (env.NODE_ENV === 'production' && !IF_EMPTY) {
+// En production, vider la base n'est possible que pour une démo déclarée comme telle
+// (double condition : option --demo-reset ET variable DEMO_RESET_ON_START=true).
+if (env.NODE_ENV === 'production' && !IF_EMPTY && !DEMO_RESET) {
   console.error('Refus de vider la base en production : utiliser --if-empty.');
   process.exit(1);
 }
