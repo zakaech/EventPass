@@ -165,6 +165,7 @@ Le cahier des charges complet est dans `EventPass_prompt_ClaudeCode.md`.
   utilisé) et saisie manuelle (secours, falsifié, autre événement/organisateur, annulé).
 - [x] Phase 4 — Tests, Docker, CI — 131 tests Jest (≈ 60 unitaires avec `jest.mock`, ≈ 70
   d'intégration), couverture ≈ 97 % des lignes ; `docker compose up` vérifié depuis une base
-  vide ; e2e vert deux fois de suite contre la pile Docker ; CI verte sur `main` ; CI rouge
-  prouvée sur une PR de démonstration (fermée, branche supprimée) ; README complet.
+  vide ; CI verte sur `main` (e2e 3/3 après correction d'une instabilité : le QR de la caméra
+  simulée débordait de la zone analysée par le scanner) ; CI rouge prouvée sur la PR #1 de
+  démonstration (fermée sans fusion, branche supprimée) ; README complet.
 - [ ] Phase 5 — Déploiement
