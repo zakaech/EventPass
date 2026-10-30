@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { getGlobalStats, listOrganisateurs, setValidation } from '../../services/adminService';
 import { useAsync } from '../../hooks/useAsync';
+import { useAuth } from '../../hooks/useAuth';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 import { PageHeader } from '../../components/PageHeader';
 import { StatCard } from '../../components/StatCard';
@@ -23,7 +24,11 @@ const TABS = [
 
 export function AdminPage() {
   useDocumentTitle('Administration');
+  const { user } = useAuth();
   const stats = useAsync(() => getGlobalStats(), []);
+  // Compte de démonstration : consultation uniquement (règle appliquée par le serveur,
+  // l'interface ne fait que l'expliquer et désactiver les boutons)
+  const lectureSeule = Boolean(user?.lecture_seule);
 
   return (
     <div className="container page">
@@ -32,10 +37,16 @@ export function AdminPage() {
       </PageHeader>
 
       <div className="stack">
+        {lectureSeule && (
+          <Alert variant="info" title="Compte de démonstration en lecture seule">
+            Vous pouvez consulter les statistiques et les comptes en attente, mais pas valider ni
+            refuser un organisateur : ces actions sont réservées à un vrai compte administrateur.
+          </Alert>
+        )}
         {stats.error && <Alert variant="error">{getErrorMessage(stats.error)}</Alert>}
         {stats.loading && !stats.data && <Loader />}
         {stats.data && <GlobalStats stats={stats.data} />}
-        <OrganisateursSection onChange={stats.reload} />
+        <OrganisateursSection onChange={stats.reload} lectureSeule={lectureSeule} />
       </div>
     </div>
   );
@@ -109,7 +120,7 @@ function TopList({ title, items }) {
   );
 }
 
-function OrganisateursSection({ onChange }) {
+function OrganisateursSection({ onChange, lectureSeule }) {
   const [tab, setTab] = useState('EN_ATTENTE');
   const [page, setPage] = useState(1);
   const [pendingId, setPendingId] = useState(null);
@@ -190,7 +201,8 @@ function OrganisateursSection({ onChange }) {
                     <button
                       type="button"
                       className="btn btn-success btn-sm"
-                      disabled={pendingId === orga.id}
+                      disabled={lectureSeule || pendingId === orga.id}
+                      title={lectureSeule ? 'Indisponible : compte en lecture seule' : undefined}
                       onClick={() => decide(orga, 'VALIDE')}
                     >
                       Valider
@@ -200,7 +212,8 @@ function OrganisateursSection({ onChange }) {
                     <button
                       type="button"
                       className="btn btn-danger btn-sm"
-                      disabled={pendingId === orga.id}
+                      disabled={lectureSeule || pendingId === orga.id}
+                      title={lectureSeule ? 'Indisponible : compte en lecture seule' : undefined}
                       onClick={() => decide(orga, 'REFUSE')}
                     >
                       {orga.statut_validation === 'VALIDE' ? 'Suspendre' : 'Refuser'}

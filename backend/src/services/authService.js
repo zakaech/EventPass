@@ -3,6 +3,7 @@ const userRepository = require('../repositories/userRepository');
 const organisateurRepository = require('../repositories/organisateurRepository');
 const { hashPassword, verifyPassword } = require('../utils/password');
 const { signToken } = require('../utils/jwt');
+const { isReadOnlyEmail } = require('../utils/readOnly');
 const { ConflictError, UnauthorizedError, NotFoundError } = require('../utils/errors');
 
 // Hash calculé une fois, utilisé quand l'email n'existe pas (voir login)
@@ -81,6 +82,9 @@ async function getMe(userId) {
   if (user.role === 'ORGANISATEUR') {
     user.organisateur = await organisateurRepository.findByUserId(userId);
   }
+  // Indication pour l'interface (boutons désactivés, message) ; la règle elle-même est
+  // appliquée par le middleware refuseWritesForReadOnly.
+  user.lecture_seule = isReadOnlyEmail(user.email);
   return user;
 }
 
