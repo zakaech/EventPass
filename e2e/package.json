@@ -5,10 +5,13 @@
   "description": "Parcours de bout en bout d'EventPass dans un vrai navigateur (Playwright)",
   "type": "module",
   "scripts": {
-    "test": "node parcours.mjs"
+    "test": "node parcours.mjs",
+    "gif": "node demo-gif.mjs"
   },
   "devDependencies": {
+    "gifenc": "1.0.3",
     "playwright": "1.64.1",
+    "pngjs": "7.0.0",
     "qrcode": "1.5.4"
   }
 }

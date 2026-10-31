@@ -11,19 +11,34 @@ Projet de portfolio full-stack : React, Node.js/Express, PostgreSQL en SQL écri
 GitHub Actions. L'accent est mis sur la **cohérence des données en cas d'accès concurrents** (pas
 de survente, pas de double check-in) et sur la **sécurité des billets** (QR infalsifiable).
 
-> Démo en ligne : à venir (phase 5).
-
-<p align="center">
-  <img src="docs/screenshots/01-accueil.png" alt="Page d'accueil" width="49%" />
-  <img src="docs/screenshots/m-10-scan-valide.png" alt="Scan d'un billet valide sur téléphone" width="22%" />
-  <img src="docs/screenshots/m-11-scan-deja-utilise.png" alt="Second scan refusé" width="22%" />
-</p>
+<table align="center">
+  <tr>
+    <td align="center" width="340">
+      <img src="docs/screenshots/parcours.gif" alt="Parcours complet sur téléphone : réservation de 2 billets, QR code du billet, scan validé puis second scan refusé, statistiques" width="320" />
+    </td>
+    <td width="380">
+      <strong>Le parcours complet en 30 secondes</strong>
+      <ol>
+        <li>une spectatrice réserve 2 billets ;</li>
+        <li>elle affiche son billet : QR code signé et code de secours ;</li>
+        <li>le jour J, l'organisatrice scanne le QR avec la caméra de son téléphone : entrée validée ;</li>
+        <li>le même billet présenté une seconde fois est refusé ;</li>
+        <li>les statistiques d'entrée se mettent à jour.</li>
+      </ol>
+      <p>Images capturées dans l'application réelle par un script Playwright
+      (<a href="e2e/demo-gif.mjs"><code>e2e/demo-gif.mjs</code></a>), caméra simulée comprise.</p>
+      <p><strong>Pour l'essayer :</strong> <code>docker compose up --build</code>, puis
+      <a href="http://localhost:8080">localhost:8080</a> et connexion en un clic avec les
+      <a href="#comptes-de-démo">comptes de démo</a>.</p>
+    </td>
+  </tr>
+</table>
 
 ## Sommaire
 
-- [Fonctionnalités](#fonctionnalités)
 - [Lancer le projet en une commande](#lancer-le-projet-en-une-commande)
 - [Comptes de démo](#comptes-de-démo)
+- [Fonctionnalités](#fonctionnalités)
 - [Captures d'écran](#captures-décran)
 - [Architecture](#architecture)
 - [Stack technique](#stack-technique)
@@ -35,18 +50,10 @@ de survente, pas de double check-in) et sur la **sécurité des billets** (QR in
 - [Tester le scanner sur un téléphone](#tester-le-scanner-sur-un-téléphone)
 - [Structure du dépôt](#structure-du-dépôt)
 
-## Fonctionnalités
-
-| Rôle | Ce qu'il peut faire |
-|---|---|
-| **Visiteur** | Parcourir les événements avec filtres (ville, catégorie, dates, prix) et pagination, voir les places restantes |
-| **Spectateur** | S'inscrire, réserver 1 à 4 billets par événement, afficher ses billets (QR code + code de secours), annuler jusqu'à 24 h avant |
-| **Organisateur** | S'inscrire (compte validé par un admin), créer / modifier / annuler ses événements, suivre ventes, remplissage et entrées, **scanner les billets** (caméra ou saisie manuelle) |
-| **Admin** | Valider ou refuser les organisateurs, consulter les statistiques globales (ventes, top catégories et villes) |
-
 ## Lancer le projet en une commande
 
-Prérequis : **Docker** (avec Docker Compose).
+Prérequis : **Docker** (Docker Desktop, ou Docker Engine avec Compose). Rien d'autre : ni Node.js
+ni PostgreSQL à installer.
 
 ```bash
 git clone https://github.com/zakaech/EventPass.git
@@ -54,7 +61,7 @@ cd EventPass
 docker compose up --build
 ```
 
-Puis ouvrir **http://localhost:8080**.
+Puis ouvrir **http://localhost:8080** (le premier build prend quelques minutes).
 
 Au premier démarrage, la base PostgreSQL est créée, les migrations SQL sont appliquées et les
 données de démo sont insérées automatiquement. Les secrets (JWT, QR) sont générés au hasard si
@@ -65,6 +72,7 @@ chaque redémarrage du backend.
 |---|---|
 | `SEED_DEMO=false` | Démarrer avec une base vide |
 | `JWT_SECRET`, `QR_SECRET` | Secrets fixes (au moins 32 caractères, différents) |
+| `READ_ONLY_EMAILS=admin@eventpass.dev` | Admin de démo en **lecture seule** : il voit tout mais ne peut rien valider ni refuser (pratique pour une présentation) |
 | `FRONTEND_PORT=8081` | Changer le port de l'interface |
 
 `docker compose down -v` arrête tout et supprime les données.
@@ -82,6 +90,18 @@ Mot de passe commun : **`Password123!`** — la page de connexion propose aussi 
 
 Pour essayer le check-in : Alice possède des billets pour *Live au Point Éphémère*, un événement
 en cours dont le contrôle est ouvert ; Sonora en est l'organisatrice.
+
+## Fonctionnalités
+
+| Rôle | Ce qu'il peut faire |
+|---|---|
+| **Visiteur** | Parcourir les événements avec filtres (ville, catégorie, dates, prix) et pagination, voir les places restantes |
+| **Spectateur** | S'inscrire, réserver 1 à 4 billets par événement, afficher ses billets (QR code + code de secours), annuler jusqu'à 24 h avant |
+| **Organisateur** | S'inscrire (compte validé par un admin), créer / modifier / annuler ses événements, suivre ventes, remplissage et entrées, **scanner les billets** (caméra ou saisie manuelle) |
+| **Admin** | Valider ou refuser les organisateurs, consulter les statistiques globales (ventes, top catégories et villes) |
+
+Si l'API tarde à répondre (serveur qui démarre), l'interface affiche « Le serveur démarre, cela
+peut prendre une minute » et relance automatiquement les lectures au lieu d'afficher une erreur.
 
 ## Captures d'écran
 
@@ -241,6 +261,8 @@ configurable (`CHECKIN_OPENS_HOURS_BEFORE`, `CHECKIN_WINDOW_HOURS`).
 - **API** : helmet (en-têtes de sécurité), CORS limité aux origines autorisées, limitation des
   tentatives de connexion par IP (`TRUST_PROXY` pour lire la vraie IP derrière Nginx), erreurs
   500 sans détail interne.
+- **Compte en lecture seule** (`READ_ONLY_EMAILS`) : un middleware placé après l'authentification
+  refuse toute écriture (403 `LECTURE_SEULE`) ; l'interface désactive les boutons et l'explique.
 - **Conteneurs** : utilisateurs non-root, aucun secret dans les images (`.dockerignore`), aucun
   secret dans le dépôt (CI comprise : secrets de test générés à chaque exécution).
 
@@ -319,7 +341,7 @@ EventPass/
 │   ├── src/              pages · components · services · context · hooks · utils
 │   ├── nginx.conf        SPA + proxy /api
 │   └── Dockerfile
-├── e2e/                  scénario Playwright + caméra simulée
+├── e2e/                  scénario Playwright + caméra simulée + génération du GIF
 ├── docs/screenshots/     captures d'écran
 ├── docker-compose.yml
 └── .github/workflows/    CI
