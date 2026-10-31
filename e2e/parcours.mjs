@@ -432,7 +432,11 @@ await check('ORGANISATEUR : statistiques de check-in à jour', async () => {
     .click();
   // 4 billets vendus, 3 scannés : 1 dans le seed + caméra + saisie manuelle
   await expectVisible(page.getByText(/75 % des billets · dernier à/));
-  const heures = await page.locator('tbody td').filter({ hasText: /^\d{2}:\d{2}$/ }).count();
+  // La liste des réservations arrive par une autre requête que les statistiques :
+  // attendre qu'elle soit affichée avant de compter (count() n'attend pas)
+  const entrees = page.locator('tbody td').filter({ hasText: /^\d{2}:\d{2}$/ });
+  await expectVisible(entrees);
+  const heures = await entrees.count();
   if (heures !== 3) throw new Error(`${heures} heures d'entrée affichées au lieu de 3`);
   await shot('18-stats-checkin');
   await logout();
