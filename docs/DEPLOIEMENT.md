@@ -115,6 +115,48 @@ ils ne doivent apparaître ni dans le dépôt, ni dans une capture d'écran.
 > d'envoyer le trafic à la nouvelle version (pas de coupure si la nouvelle version plante).
 > `buildFilter` : seul un changement dans `backend/` redéploie l'API.
 
+### Variante : créer le service à la main (si le Blueprint demande une carte bancaire)
+
+Le résultat est le même service que celui décrit par `render.yaml`, saisi champ par champ.
+**New +** → **Web Service** → onglet **Git Provider** → dépôt `zakaech/EventPass`, puis :
+
+| Champ | Valeur |
+|---|---|
+| Name | `eventpass-api` |
+| Language | `Docker` |
+| Branch | `main` |
+| Region | `Frankfurt (EU Central)` |
+| Root Directory | *(laisser vide)* |
+| Dockerfile Path | `./backend/Dockerfile` |
+| Docker Build Context Directory | `./backend` |
+| Instance Type | **Free** (512 Mo, 0,1 CPU) |
+
+**Environment Variables** (bouton *Add Environment Variable*, une ligne par variable) :
+
+| Clé | Valeur |
+|---|---|
+| `NODE_ENV` | `production` |
+| `DATABASE_URL` | chaîne Neon de l'étape 1 (`…?sslmode=verify-full`) |
+| `JWT_SECRET` | premier secret |
+| `QR_SECRET` | second secret |
+| `CORS_ORIGIN` | `https://eventpass.vercel.app` (provisoire, corrigé à l'étape 4) |
+| `TRUST_PROXY` | `1` |
+| `DEMO_RESET_ON_START` | `true` |
+| `READ_ONLY_EMAILS` | `admin@eventpass.dev` |
+| `JWT_EXPIRES_IN` | `2h` |
+
+Ne pas définir `PORT` : Render le fournit (10000). Section **Advanced** :
+
+- **Health Check Path** : `/api/v1/health` ;
+- **Docker Command** : vide (l'image lance déjà `scripts/docker-entrypoint.sh`) ;
+- **Build Filters** : *Included Paths* `backend/**` ; *Ignored Paths* `backend/tests/**` et
+  `backend/requests/**` ;
+- **Auto-Deploy** : `On Commit`.
+
+Puis **Deploy Web Service** et reprendre au point 4 ci-dessus (logs, URL, `/health`).
+Contrepartie : `render.yaml` n'est plus la source de vérité ; une modification faite dans le
+fichier doit aussi être reportée à la main dans le tableau de bord.
+
 ✅ **Point d'étape** : `/api/v1/health` répond `"ok"` ; noter l'URL du service.
 
 ---
