@@ -68,30 +68,23 @@ Le cahier des charges complet est dans `EventPass_prompt_ClaudeCode.md`.
 - Test caméra sur téléphone : `npm run dev:phone` (HTTPS auto-signé + `--host`), API relayée par
   le proxy Vite (`/api` → `localhost:3000`) pour éviter le contenu mixte.
 
-## Déploiement (phase 5) — guide : `docs/DEPLOIEMENT.md`
-- Neon (PostgreSQL, AWS Frankfurt, adresse **directe** sans `-pooler`, `?sslmode=verify-full`)
-  ← Render (API, Docker, plan free, Frankfurt, `render.yaml` à la racine : Blueprint,
-  `healthCheckPath`, `buildFilter` sur `backend/**`) ← Vercel (frontend, Root Directory
-  `frontend`, `frontend/vercel.json` : rewrite SPA vers `index.html` + cache des assets).
-- Variables Render saisies à la main (`sync: false`) : `DATABASE_URL`, `JWT_SECRET`, `QR_SECRET`,
-  `CORS_ORIGIN` (URL Vercel exacte). Fixées dans `render.yaml` : `NODE_ENV=production`,
-  `TRUST_PROXY=1`, `DEMO_RESET_ON_START=true`, `READ_ONLY_EMAILS=admin@eventpass.dev`.
-  Vercel : `VITE_API_URL=https://<service>.onrender.com/api/v1` (figée au build).
-- Secrets de production : différents du local, jamais écrits dans un fichier du dépôt.
-- **Démo publique** : `DEMO_RESET_ON_START=true` → `seed.js --demo-reset` à chaque démarrage
-  (le service gratuit s'endort après 15 min : données toujours fraîches). En production, le seed
-  ne vide la base qu'avec `--demo-reset` ET cette variable (double garde).
-- **Lecture seule** : `READ_ONLY_EMAILS` (liste d'emails). `middlewares/readOnly.js`
-  (`refuseWritesForReadOnly`, sur tout le routeur admin) refuse POST/PUT/PATCH/DELETE en 403
-  `LECTURE_SEULE` ; l'email est relu en base (pas dans le JWT). `/auth/me` renvoie
-  `lecture_seule` pour que l'interface affiche un message et désactive les boutons.
-- **Réveil du serveur** : `frontend/src/services/serverWake.js` compte les requêtes > 4 s ;
+## Robustesse et démo (issus de la phase 5, conservés en local)
+- **Pas de déploiement en ligne** (décision de l'utilisateur) : le projet se lance avec
+  `docker compose up --build` et se montre via le README (GIF + captures). Aucune
+  configuration d'hébergeur dans le dépôt (`render.yaml`, `vercel.json`, guide supprimés).
+- **Lecture seule** : `READ_ONLY_EMAILS` (liste d'emails, vide par défaut, transmise par
+  docker-compose). `middlewares/readOnly.js` (`refuseWritesForReadOnly`, sur tout le routeur
+  admin) refuse POST/PUT/PATCH/DELETE en 403 `LECTURE_SEULE` ; l'email est relu en base (pas
+  dans le JWT). `/auth/me` renvoie `lecture_seule` pour que l'interface affiche un message et
+  désactive les boutons.
+- **Serveur lent** : `frontend/src/services/serverWake.js` compte les requêtes > 4 s ;
   `ServerWakeBanner` (useSyncExternalStore) affiche « Le serveur démarre… ». L'intercepteur
   axios relance les **GET** seulement (jusqu'à 3 fois) sur 502/503/504/réseau ; délai 70 s.
-- `pool.on('error')` dans `config/db.js` : Neon coupe les connexions inactives (sans ce
-  gestionnaire, le processus planterait).
-- Vérification du site déployé : `e2e/production.mjs` (11 étapes, 3 connexions, crée et annule
-  ses propres données).
+- `pool.on('error')` dans `config/db.js` : une connexion inactive coupée par le serveur
+  journalise une erreur au lieu de faire planter le processus.
+- GIF du README : `e2e/demo-gif.mjs` (`npm run gif`) → `docs/screenshots/parcours.gif`
+  (format téléphone, légendes en popover pour passer au-dessus des `<dialog>`, encodé avec
+  `gifenc` + `pngjs`, sans ffmpeg). Il crée son propre événement dans 3 h (contrôle ouvert).
 
 ## Conventions frontend
 - `pages/` (une page par route, sous-dossiers `organisateur/` et `admin/`), `components/`
@@ -104,7 +97,8 @@ Le cahier des charges complet est dans `EventPass_prompt_ClaudeCode.md`.
 - Erreurs API affichées via `getErrorMessage(err)` ; erreurs par champ via `getFieldErrors(err)`
   + `<FormField error>`.
 - API appelée en relatif (`/api/v1`) : en dev, le proxy Vite relaie vers `localhost:3000` ;
-  en production, `VITE_API_URL` donne l'URL absolue.
+  dans Docker, Nginx relaie. `VITE_API_URL` (figée au build) seulement si l'API est sur un
+  autre domaine.
 - JWT dans `localStorage` (`services/tokenStorage.js`), ajouté par l'intercepteur de requête.
   Intercepteur de réponse : sur 401 (hors `/auth/login`), il appelle le handler enregistré par
   `AuthProvider` → `endSession()` : vide le jeton, `setUser(null)` **et** `navigate()` dans un
@@ -155,14 +149,15 @@ Le cahier des charges complet est dans `EventPass_prompt_ClaudeCode.md`.
 ## Décisions prises
 - Projet dans `C:\dev\EventPass` (hors OneDrive). Remote `origin` = GitHub (push par HTTPS,
   CLI `gh` non installée ; API GitHub appelée avec l'identifiant enregistré par Git, sans
-  jamais l'afficher). Dépôt **public** depuis la phase 5.
+  jamais l'afficher). Dépôt **public**.
   `EventPass_prompt_ClaudeCode.md` est ignoré par git.
-- `TRUST_PROXY` = nombre de proxys devant l'API (1 derrière Nginx ou Render) : sans lui, la
+- `TRUST_PROXY` = nombre de proxys devant l'API (1 derrière Nginx) : sans lui, la
   limite de connexions verrait une seule IP (celle du proxy).
 - Seed : `npm run db:seed` vide la base (refusé en production) ; `--if-empty` n'insère que si
   aucun compte n'existe (seul mode autorisé en production, utilisé par Docker).
 - Captures d'écran pour le README : `docs/screenshots/` (desktop `NN-*.png`, mobile `m-NN-*.png`),
-  régénérées par le scénario e2e puis recopiées.
+  régénérées par le scénario e2e puis recopiées ; `parcours.gif` écrit directement par
+  `e2e/demo-gif.mjs`.
 - Quota : 4 billets max **au total** par utilisateur et par événement (VALIDE + UTILISE).
 - Index composite `tickets (event_id, user_id)` (pas d'index `tickets (event_id)` seul).
 - Filtre ville insensible à la casse (`lower(ville)`, index sur l'expression) ; filtres
@@ -170,7 +165,7 @@ Le cahier des charges complet est dans `EventPass_prompt_ClaudeCode.md`.
 - `categorie` est un ENUM PostgreSQL : CONCERT, THEATRE, SPORT, CONFERENCE, FESTIVAL,
   EXPOSITION, AUTRE.
 - JWT envoyé dans l'en-tête `Authorization` (stocké côté frontend), pas en cookie httpOnly :
-  frontend (Vercel) et API (Render) sur des domaines différents.
+  choix fait pour permettre un frontend et une API sur des domaines différents.
 - Statut de validation de l'organisateur relu en base à chaque requête (pas dans le JWT).
 - `PUT /organisateur/events/:id` = remplacement complet ; recalcule `places_restantes`
   sous `SELECT ... FOR UPDATE` ; refuse une capacité < billets vendus.
@@ -193,4 +188,8 @@ Le cahier des charges complet est dans `EventPass_prompt_ClaudeCode.md`.
   vide ; CI verte sur `main` (e2e 3/3 après correction d'une instabilité : le QR de la caméra
   simulée débordait de la zone analysée par le scanner) ; CI rouge prouvée sur la PR #1 de
   démonstration (fermée sans fusion, branche supprimée) ; README complet.
-- [ ] Phase 5 — Déploiement (en cours : configuration prête, déploiement guidé pas à pas)
+- [~] Phase 5 — Déploiement : **abandonnée volontairement** (Render exigeait une carte
+  bancaire ; l'utilisateur a choisi de ne pas mettre le projet en ligne). Conservé : admin en
+  lecture seule, bandeau « Le serveur démarre », `pool.on('error')`. Supprimé : `render.yaml`,
+  `frontend/vercel.json`, `docs/DEPLOIEMENT.md`, `e2e/production.mjs`, `DEMO_RESET_ON_START`.
+  Ajouté : GIF du parcours dans le README (`e2e/demo-gif.mjs`).
