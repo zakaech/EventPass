@@ -5,10 +5,10 @@ import { trackRequest } from './serverWake';
 // Instance axios partagée par tous les services : URL de base commune + intercepteurs.
 // VITE_API_URL est lue au moment du build (variables préfixées VITE_ uniquement).
 // Par défaut, même origine que le frontend (/api/v1) : le proxy de Vite ou Nginx relaie
-// vers l'API. En production (Vercel → Render), VITE_API_URL contient l'URL complète.
+// vers l'API. Si l'API est sur un autre domaine, VITE_API_URL contient l'URL complète.
 export const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || '/api/v1',
-  // Long délai : au réveil, l'hébergement gratuit peut mettre une minute à répondre
+  // Long délai : un serveur qui démarre (ou sort de veille) peut mettre une minute à répondre
   timeout: 70000,
 });
 

@@ -1,7 +1,7 @@
 const { pool } = require('../config/db');
 
 /**
- * GET /api/v1/health — utilisé par le healthcheck Docker et par l'hébergeur (Render) pour
+ * GET /api/v1/health — utilisé par le healthcheck Docker (et par tout hébergeur) pour
  * savoir si l'instance peut recevoir du trafic. On vérifie aussi la base : une API qui
  * répond mais ne joint plus PostgreSQL n'est pas « en bonne santé » (503).
  */

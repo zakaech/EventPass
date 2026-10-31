@@ -11,8 +11,8 @@ types.setTypeParser(types.builtins.NUMERIC, (value) => Number(value));
 // ouvrir une connexion PostgreSQL à chaque requête HTTP serait beaucoup trop lent.
 const pool = new Pool({ connectionString: env.DATABASE_URL });
 
-// Une connexion inactive du pool peut être coupée par le serveur (Neon met la base en
-// veille après quelques minutes sans activité). Sans ce gestionnaire, l'erreur émise sur la
+// Une connexion inactive du pool peut être coupée par le serveur (redémarrage de PostgreSQL,
+// base hébergée mise en veille…). Sans ce gestionnaire, l'erreur émise sur la
 // connexion inactive ferait planter tout le processus Node. Le pool l'écarte et en ouvrira
 // une nouvelle à la prochaine requête.
 pool.on('error', (error) => {

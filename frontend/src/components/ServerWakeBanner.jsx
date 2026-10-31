@@ -18,7 +18,7 @@ export function ServerWakeBanner() {
       <div>
         <strong>Le serveur démarre, cela peut prendre une minute.</strong>
         <span className={styles.detail}>
-          L’hébergement gratuit met l’API en veille après 15 minutes sans visite.
+          L’API répond plus lentement que d’habitude : la page s’affichera dès qu’elle sera prête.
         </span>
       </div>
     </div>

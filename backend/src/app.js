@@ -10,7 +10,7 @@ const { errorHandler, notFound } = require('./middlewares/errorHandler');
 // directement dans les tests, sans ouvrir de port réseau.
 const app = express();
 
-// Derrière un proxy (Nginx, Render), la connexion TCP vient du proxy : sans ce réglage,
+// Derrière un proxy (Nginx), la connexion TCP vient du proxy : sans ce réglage,
 // tous les clients auraient la même IP et la limite de tentatives de connexion serait
 // partagée par tout le monde. Avec N proxys de confiance, Express lit la vraie IP dans
 // l'en-tête X-Forwarded-For. On ne fait confiance qu'au nombre de proxys réellement

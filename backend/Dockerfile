@@ -33,7 +33,7 @@ USER node
 EXPOSE 3000
 
 # Docker interroge /health : le conteneur passe « healthy » quand l'API répond ET joint la base.
-# ${PORT:-3000} : l'hébergeur (Render) peut imposer un autre port via la variable PORT.
+# ${PORT:-3000} : suit la variable PORT si elle est redéfinie.
 HEALTHCHECK --interval=10s --timeout=3s --start-period=20s --retries=5 \
   CMD wget -qO- "http://127.0.0.1:${PORT:-3000}/api/v1/health" > /dev/null || exit 1
 
